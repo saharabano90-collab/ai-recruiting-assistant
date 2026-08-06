@@ -44,6 +44,7 @@ def extract_text_from_pdf(file: UploadFile) -> str:
         return text.strip()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
+
 @app.get("/api")
 def read_root():
     return {"status": "Backend API is running successfully!"}
@@ -51,6 +52,7 @@ def read_root():
 @app.get("/api/docs")
 def custom_docs():
     return app.openapi()
+
 @app.post("/api/evaluate", response_model=CandidateEvaluation)
 async def evaluate_candidate(
     job_description: str = Form(...),
@@ -75,7 +77,7 @@ async def evaluate_candidate(
     """
 
     try:
-        # 3. Call Google Gemini with Structured Output enforcement
+        # 3. Call Google Gemini with Stable Production Model
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
