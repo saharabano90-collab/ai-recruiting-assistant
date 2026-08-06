@@ -77,9 +77,9 @@ async def evaluate_candidate(
     """
 
     try:
-        # 3. Call Google Gemini Pro Model
+        # 3. Call Google Gemini 1.5 Flash (Generous Free Tier Model)
         response = client.models.generate_content(
-            model='gemini-2.5-pro',
+            model='gemini-1.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
