@@ -100,7 +100,7 @@
 
             const formData = new FormData();
             formData.append('job_description', document.getElementById('jobDescription').value);
-            formData.append('resume_file', document.getElementById('resumeFile').files);
+            formData.append('resume_file', document.getElementById('resumeFile').files[0]);
 
             try {
                 const response = await fetch('/api/evaluate', {
