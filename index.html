@@ -133,7 +133,15 @@
                     skillsContainer.appendChild(span);
                 });
 
-                results.classList.remove('hidden');
-            </script>
-        </body>
-        </html>
+                               results.classList.remove('hidden');
+            } catch (error) {
+                alert('Error processing file. Make sure your GEMINI_API_KEY is added to Vercel settings.');
+                console.error(error);
+            } finally {
+                submitBtn.disabled = false;
+                loading.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
