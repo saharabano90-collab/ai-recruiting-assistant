@@ -86,7 +86,7 @@
         </div>
     </div>
 
-    <script>
+        <script>
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -98,9 +98,14 @@
             loading.classList.remove('hidden');
             results.classList.add('hidden');
 
+            const jobDescText = document.getElementById('jobDescription').value;
+            const fileInput = document.getElementById('resumeFile');
+            const resumeFileObj = fileInput.files[0];
+
+            // Correctly bundle form data for FastAPI
             const formData = new FormData();
-            formData.append('job_description', document.getElementById('jobDescription').value);
-            formData.append('resume_file', document.getElementById('resumeFile').files[0]);
+            formData.append('job_description', jobDescText);
+            formData.append('resume_file', resumeFileObj);
 
             try {
                 const response = await fetch('/api/evaluate', {
@@ -108,7 +113,11 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error('API processing failed.');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'API processing failed.');
+                }
+                
                 const data = await response.json();
 
                 document.getElementById('candidateName').textContent = data.candidate_name;
@@ -119,11 +128,13 @@
                 const updateList = (elementId, array) => {
                     const el = document.getElementById(elementId);
                     el.innerHTML = '';
-                    array.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = item;
-                        el.appendChild(li);
-                    });
+                    if (array && array.length > 0) {
+                        array.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            el.appendChild(li);
+                        });
+                    }
                 };
 
                 updateList('strengthsList', data.strengths);
@@ -132,16 +143,18 @@
 
                 const skillsContainer = document.getElementById('skillsContainer');
                 skillsContainer.innerHTML = '';
-                data.skills.forEach(skill => {
-                    const span = document.createElement('span');
-                    span.className = "badge";
-                    span.textContent = skill;
-                    skillsContainer.appendChild(span);
-                });
+                if (data.skills && data.skills.length > 0) {
+                    data.skills.forEach(skill => {
+                        const span = document.createElement('span');
+                        span.className = "badge";
+                        span.textContent = skill;
+                        skillsContainer.appendChild(span);
+                    });
+                }
 
                 results.classList.remove('hidden');
             } catch (error) {
-                alert('Error processing file. Please check your Gemini API Key in Vercel settings.');
+                alert('Error processing file: ' + error.message);
                 console.error(error);
             } finally {
                 submitBtn.disabled = false;
