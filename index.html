@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recruiting Assistant</title>
+    <script src="https://tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="max-w-4xl mx-auto py-10 px-4">
+        <!-- Header -->
+        <div class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">🤖 AI Recruiting Assistant</h1>
+            <p class="text-gray-600">Streamline hiring from resume screening to candidate evaluation</p>
+        </div>
+
+        <!-- Form Section -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <form id="uploadForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">1. Job Description</label>
+                    <textarea id="jobDescription" rows="4" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Paste the job requirements and responsibilities here..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">2. Candidate Resume (PDF)</label>
+                    <input type="file" id="resumeFile" accept=".pdf" required class="w-full px-3 py-2 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                    Analyze Candidate Fit
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="hidden text-center py-6">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600 font-medium">AI is reading resume and evaluating profile...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden bg-white p-6 rounded-xl shadow-md space-y-6">
+            <div class="flex justify-between items-center border-b pb-4">
+                <div>
+                    <h2 id="candidateName" class="text-2xl font-bold text-gray-900">John Doe</h2>
+                    <p id="candidateSummary" class="text-gray-600 mt-1">Summary placeholder</p>
+                </div>
+                <div class="text-center">
+                    <span class="block text-xs font-bold text-gray-500 uppercase">Match Score</span>
+                    <span id="matchScore" class="text-4xl font-extrabold text-green-600">0%</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-bold text-gray-800 mb-2">💪 Key Strengths</h3>
+                    <ul id="strengthsList" class="list-disc pl-5 text-gray-600 space-y-1"></ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 mb-2">⚠️ Skill Gaps</h3>
+                    <ul id="gapsList" class="list-disc pl-5 text-gray-600 space-y-1"></ul>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-bold text-gray-800 mb-2">🛠️ Extracted Skills & Experience</h3>
+                <p class="text-sm text-gray-600 mb-2">Total Experience: <span id="experienceYears" class="font-semibold text-gray-900">0</span> years</p>
+                <div id="skillsContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="border-t pt-4">
+                <h3 class="font-bold text-gray-800 mb-3">❓ Recommended Interview Questions</h3>
+                <ul id="questionsList" class="list-decimal pl-5 text-gray-600 space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            // UI States
+            submitBtn.disabled = true;
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            // Prepare Form Data
+            const formData = new FormData();
+            formData.append('job_description', document.getElementById('jobDescription').value);
+            formData.append('resume_file', document.getElementById('resumeFile').files[0]);
+
+            try {
+                // Send request to your Vercel Python API route
+                const response = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('API processing failed.');
+                const data = await response.json();
+
+                // Populate UI with Gemini Response Data
+                document.getElementById('candidateName').textContent = data.candidate_name;
+                document.getElementById('candidateSummary').textContent = data.summary;
+                document.getElementById('matchScore').textContent = data.match_score + '%';
+                document.getElementById('experienceYears').textContent = data.experience_years;
+
+                // Lists Helper
+                const updateList = (elementId, array) => {
+                    const el = document.getElementById(elementId);
+                    el.innerHTML = '';
+                    array.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = item;
+                        el.appendChild(li);
+                    });
+                };
+
+                updateList('strengthsList', data.strengths);
+                updateList('gapsList', data.gaps);
+                updateList('questionsList', data.interview_questions);
+
+                // Skills Badges
+                const skillsContainer = document.getElementById('skillsContainer');
+                skillsContainer.innerHTML = '';
+                data.skills.forEach(skill => {
+                    const span = document.createElement('span');
+                    span.className = "bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded";
+                    span.textContent = skill;
+                    skillsContainer.appendChild(span);
+                });
+
+                results.classList.remove('hidden');
+            </script>
+        </body>
+        </html>
