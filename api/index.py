@@ -1,9 +1,8 @@
 import os
-import json
-import httpx
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pypdf import PdfReader
+from openai import OpenAI  # Swapped from google.genai
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -18,14 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# OpenRouter Configuration (Fetched from environment variables)
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-if not OPENROUTER_API_KEY:
-    raise RuntimeError("CRITICAL ERROR: OPENROUTER_API_KEY environment variable is not set.")
-
-OPENROUTER_URL = "https://openrouter.ai"
-
-# Define the exact JSON structure we want the model to return
+# Define the exact JSON structure we want OpenRouter to return
 class CandidateEvaluation(BaseModel):
     candidate_name: str = Field(description="Full name of the candidate")
     skills: List[str] = Field(description="Key skills found in the resume")
@@ -35,6 +27,12 @@ class CandidateEvaluation(BaseModel):
     strengths: List[str] = Field(description="Key qualifications aligning with the job description")
     gaps: List[str] = Field(description="Required job skills or experience missing from the resume")
     interview_questions: List[str] = Field(description="3-4 targeted, role-specific questions to ask this candidate")
+
+# Initialize OpenRouter Client (Expects OPENROUTER_API_KEY environment variable)
+client = OpenAI(
+    base_url="https://openrouter.ai",
+    api_key=os.environ.get("OPENROUTER_API_KEY"),
+)
 
 def extract_text_from_pdf(file: UploadFile) -> str:
     """Helper function to parse text out of an uploaded PDF file."""
@@ -67,7 +65,7 @@ async def evaluate_candidate(
     if not resume_text:
         raise HTTPException(status_code=400, detail="Could not extract text from the provided resume PDF.")
 
-    # 2. Build the AI prompt with explicit JSON schema instructions for OpenRouter
+    # 2. Build the AI prompt
     prompt = f"""
     You are an expert HR recruitment assistant. Analyze the candidate's Resume against the provided Job Description.
     
@@ -78,41 +76,21 @@ async def evaluate_candidate(
     {resume_text}
     
     Extract details, compare qualifications, identify strengths/gaps, score the candidate, and generate interview questions.
-    
-    You MUST respond with a raw JSON object matching this schema:
-    {json.dumps(CandidateEvaluation.model_json_schema(), indent=2)}
     """
 
-    # 3. Call Google Gemini via OpenRouter API
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "model": "google/gemini-2.5-flash",
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.2,
-        "response_format": {"type": "json_object"} 
-    }
-
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60.0)
-            
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=f"OpenRouter API Error: {response.text}")
-            
-        result_json = response.json()
-        raw_content = result_json["choices"]["message"]["content"]
+        # 3. Call OpenRouter with Structured Outputs configuration
+        response = client.beta.chat.completions.parse(
+            model='google/gemini-2.5-flash',
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            response_format=CandidateEvaluation,
+            temperature=0.2,
+        )
         
-        # 4. Parse and validate the stringified JSON against your Pydantic schema
-        validated_data = CandidateEvaluation.model_validate_json(raw_content)
-        return validated_data
-
-    except KeyError:
-        raise HTTPException(status_code=500, detail="Unexpected response structure from OpenRouter.")
+        # 4. Return parsed message model object directly to the frontend
+        return response.choices[0].message.parsed
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Evaluation Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OpenRouter API Error: {str(e)}")
