@@ -4,92 +4,80 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Recruiting Assistant</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f9fafb; color: #111827; margin: 0; padding: 40px 20px; }
-        .container { max-w-4xl: 800px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 40px; }
-        .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
-        textarea, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; bg-color: #2563eb; background: #2563eb; color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #1d4ed8; }
-        button:disabled { background: #9ca3af; cursor: not-allowed; }
-        .hidden { display: none; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #2563eb; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .score { font-size: 36px; font-weight: 800; color: #16a34a; }
-        .badge { display: inline-block; background: #f3f4f6; color: #1f2937; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 4px; }
-    </style>
+    <!-- Embedded Tailwind styles to prevent Vercel security blocks -->
+    <link rel="stylesheet" href="https://cloudflare.com">
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 style="font-size: 32px; margin-bottom: 8px;">🤖 AI Recruiting Assistant</h1>
-            <p style="color: #4b5563; margin: 0;">Streamline hiring from resume screening to candidate evaluation</p>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="max-w-4xl mx-auto py-10 px-4">
+        <!-- Header Section -->
+        <div class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">🤖 AI Recruiting Assistant</h1>
+            <p class="text-gray-600">Streamline hiring from resume screening to candidate evaluation</p>
         </div>
 
-        <div class="card">
-            <form id="uploadForm">
-                <div class="form-group">
-                    <label>1. Job Description</label>
-                    <textarea id="jobDescription" rows="5" required placeholder="Paste the job requirements and responsibilities here..."></textarea>
+        <!-- Form Section -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <form id="uploadForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">1. Job Description</label>
+                    <textarea id="jobDescription" rows="4" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Paste the job requirements and responsibilities here..."></textarea>
                 </div>
-                <div class="form-group">
-                    <label>2. Candidate Resume (PDF)</label>
-                    <input type="file" id="resumeFile" accept=".pdf" required>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">2. Candidate Resume (PDF)</label>
+                    <input type="file" id="resumeFile" accept=".pdf" required class="w-full px-3 py-2 border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                 </div>
-                <button type="submit" id="submitBtn">Analyze Candidate Fit</button>
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                    Analyze Candidate Fit
+                </button>
             </form>
         </div>
 
-        <div id="loading" class="hidden" style="text-align: center; padding: 20px;">
-            <div class="spinner"></div>
-            <p style="color: #4b5563;">AI is reading resume and evaluating profile...</p>
+        <!-- Loading State Spinner -->
+        <div id="loading" class="hidden text-center py-6">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600 font-medium">AI is reading resume and evaluating profile...</p>
         </div>
 
-        <div id="results" class="card hidden">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 20px;">
+        <!-- Dashboard Results Cards -->
+        <div id="results" class="hidden bg-white p-6 rounded-xl shadow-md space-y-6">
+            <div class="flex justify-between items-center border-b pb-4">
                 <div>
-                    <h2 id="candidateName" style="margin: 0 0 5px 0; font-size: 24px;">Candidate Name</h2>
-                    <p id="candidateSummary" style="color: #4b5563; margin: 0; font-size: 14px;"></p>
+                    <h2 id="candidateName" class="text-2xl font-bold text-gray-900">Candidate Name</h2>
+                    <p id="candidateSummary" class="text-gray-600 mt-1"></p>
                 </div>
-                <div style="text-align: center;">
-                    <span style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #6b7280; display: block;">Match Score</span>
-                    <span id="matchScore" class="score">0%</span>
+                <div class="text-center">
+                    <span class="block text-xs font-bold text-gray-500 uppercase">Match Score</span>
+                    <span id="matchScore" class="text-4xl font-extrabold text-green-600">0%</span>
                 </div>
             </div>
 
-            <p style="font-size: 15px;"><strong>Total Experience:</strong> <span id="experienceYears">0</span> years</p>
-
-            <div class="grid">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <h3 style="margin-bottom: 10px; color: #111827;">💪 Key Strengths</h3>
-                    <ul id="strengthsList" style="padding-left: 20px; color: #4b5563; line-height: 1.6;"></ul>
+                    <h3 class="font-bold text-gray-800 mb-2">💪 Key Strengths</h3>
+                    <ul id="strengthsList" class="list-disc pl-5 text-gray-600 space-y-1"></ul>
                 </div>
                 <div>
-                    <h3 style="margin-bottom: 10px; color: #111827;">⚠️ Skill Gaps</h3>
-                    <ul id="gapsList" style="padding-left: 20px; color: #4b5563; line-height: 1.6;"></ul>
+                    <h3 class="font-bold text-gray-800 mb-2">⚠️ Skill Gaps</h3>
+                    <ul id="gapsList" class="list-disc pl-5 text-gray-600 space-y-1"></ul>
                 </div>
             </div>
 
-            <div style="margin-top: 25px;">
-                <h3 style="margin-bottom: 10px; color: #111827;">🛠️ Extracted Skills</h3>
-                <div id="skillsContainer"></div>
+            <div>
+                <h3 class="font-bold text-gray-800 mb-2">🛠️ Extracted Skills & Experience</h3>
+                <p class="text-sm text-gray-600 mb-2">Total Experience: <span id="experienceYears" class="font-semibold text-gray-900">0</span> years</p>
+                <div id="skillsContainer" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <div style="margin-top: 25px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                <h3 style="margin-bottom: 10px; color: #111827;">❓ Recommended Interview Questions</h3>
-                <ol id="questionsList" style="padding-left: 20px; color: #4b5563; line-height: 1.6;"></ol>
+            <div class="border-t pt-4">
+                <h3 class="font-bold text-gray-800 mb-3">❓ Recommended Interview Questions</h3>
+                <ul id="questionsList" class="list-decimal pl-5 text-gray-600 space-y-2"></ul>
             </div>
         </div>
     </div>
 
-        <script>
+    <script>
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const submitBtn = document.getElementById('submitBtn');
             const loading = document.getElementById('loading');
             const results = document.getElementById('results');
@@ -98,26 +86,13 @@
             loading.classList.remove('hidden');
             results.classList.add('hidden');
 
-            const jobDescText = document.getElementById('jobDescription').value;
-            const fileInput = document.getElementById('resumeFile');
-            const resumeFileObj = fileInput.files[0];
-
-            // Correctly bundle form data for FastAPI
             const formData = new FormData();
-            formData.append('job_description', jobDescText);
-            formData.append('resume_file', resumeFileObj);
+            formData.append('job_description', document.getElementById('jobDescription').value);
+            formData.append('resume_file', document.getElementById('resumeFile').files[0]);
 
             try {
-                const response = await fetch('/api/evaluate', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(errorText || 'API processing failed.');
-                }
-                
+                const response = await fetch('/api/evaluate', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('API request failed.');
                 const data = await response.json();
 
                 document.getElementById('candidateName').textContent = data.candidate_name;
@@ -128,13 +103,11 @@
                 const updateList = (elementId, array) => {
                     const el = document.getElementById(elementId);
                     el.innerHTML = '';
-                    if (array && array.length > 0) {
-                        array.forEach(item => {
-                            const li = document.createElement('li');
-                            li.textContent = item;
-                            el.appendChild(li);
-                        });
-                    }
+                    array.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = item;
+                        el.appendChild(li);
+                    });
                 };
 
                 updateList('strengthsList', data.strengths);
@@ -143,18 +116,16 @@
 
                 const skillsContainer = document.getElementById('skillsContainer');
                 skillsContainer.innerHTML = '';
-                if (data.skills && data.skills.length > 0) {
-                    data.skills.forEach(skill => {
-                        const span = document.createElement('span');
-                        span.className = "badge";
-                        span.textContent = skill;
-                        skillsContainer.appendChild(span);
-                    });
-                }
+                data.skills.forEach(skill => {
+                    const span = document.createElement('span');
+                    span.className = "bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded";
+                    span.textContent = skill;
+                    skillsContainer.appendChild(span);
+                });
 
                 results.classList.remove('hidden');
             } catch (error) {
-                alert('Error processing file: ' + error.message);
+                alert('Error running analysis. Please confirm your clean deployment step.');
                 console.error(error);
             } finally {
                 submitBtn.disabled = false;
