@@ -1,8 +1,9 @@
 import os
+import json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pypdf import PdfReader
-from openai import OpenAI  # Swapped from google.genai
+from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -30,7 +31,7 @@ class CandidateEvaluation(BaseModel):
 
 # Initialize OpenRouter Client (Expects OPENROUTER_API_KEY environment variable)
 client = OpenAI(
-    base_url="https://openrouter.ai",
+    base_url="https://openrouter.ai/api/v1",
     api_key=os.environ.get("OPENROUTER_API_KEY"),
 )
 
@@ -65,7 +66,10 @@ async def evaluate_candidate(
     if not resume_text:
         raise HTTPException(status_code=400, detail="Could not extract text from the provided resume PDF.")
 
-    # 2. Build the AI prompt
+    # 2. Build the AI prompt embedding the required Pydantic schema structure
+    # Pydantic's model_json_schema() exports a clean JSON schema structure OpenRouter models can understand
+    json_schema_str = json.dumps(CandidateEvaluation.model_json_schema(), indent=2)
+    
     prompt = f"""
     You are an expert HR recruitment assistant. Analyze the candidate's Resume against the provided Job Description.
     
@@ -75,22 +79,45 @@ async def evaluate_candidate(
     CANDIDATE RESUME:
     {resume_text}
     
-    Extract details, compare qualifications, identify strengths/gaps, score the candidate, and generate interview questions.
+    Task: Extract details, compare qualifications, identify strengths/gaps, score the candidate, and generate interview questions.
+    You MUST output valid JSON conforming exactly to this schema:
+    {json_schema_str}
     """
 
     try:
-        # 3. Call OpenRouter with Structured Outputs configuration
-        response = client.beta.chat.completions.parse(
+        # 3. Request completion using OpenRouter's baseline JSON object validation
+        response = client.chat.completions.create(
             model='google/gemini-2.5-flash',
             messages=[
+                {
+                    "role": "system", 
+                    "content": "You are a precise data extraction system. You must return RAW JSON matching the requested schema. No conversational filler, no markdown code blocks."
+                },
                 {"role": "user", "content": prompt}
             ],
-            response_format=CandidateEvaluation,
-            temperature=0.2,
+            response_format={"type": "json_object"}, 
+            temperature=0.1, # Reduced temperature for stricter formatting adherence
         )
         
-        # 4. Return parsed message model object directly to the frontend
-        return response.choices[0].message.parsed
+        response_text = response.choices[0].message.content.strip()
         
+        # 4. Safe Parsing Cleanup
+        # If the model ignored the system prompt and wrapped the response in a markdown block, strip it.
+        if response_text.startswith("```"):
+            response_text = response_text.strip("```").strip("json").strip()
+            
+        parsed_json = json.loads(response_text)
+        
+        # Validate the keys strictly using Pydantic before sending it to the frontend
+        return CandidateEvaluation(**parsed_json)
+        
+    except json.JSONDecodeError as je:
+        raise HTTPException(
+            status_code=502, 
+            detail=f"OpenRouter returned unparseable text: {response_text}. Error: {str(je)}"
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenRouter API Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"OpenRouter runtime error: {str(e)}"
+        )
