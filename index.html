@@ -1,329 +1,500 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Recruiting Assistant Dashboard</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #16a34a;
-            --warning: #ca8a04;
-            --danger: #dc2626;
-            --bg-main: #f8fafc;
-            --bg-card: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #475569;
-            --border: #e2e8f0;
-            --radius: 12px;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HireAI – AI-Powered Recruiting Assistant</title>
+  <meta name="description" content="AI-powered recruiting assistant that streamlines hiring from resume screening to candidate evaluation. Reduce manual effort, improve consistency, and make faster decisions." />
+  <meta name="keywords" content="recruiting, AI, HR, hiring, resume screening, candidate evaluation" />
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- Mammoth.js (DOCX) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            padding: 24px;
-            line-height: 1.5;
-        }
-
-        header {
-            margin-bottom: 32px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 16px;
-        }
-
-        header h1 {
-            font-size: 1.8rem;
-            color: #1e3a8a;
-        }
-
-        header p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
-        .main-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-        }
-
-        @media (min-width: 1024px) {
-            .main-container {
-                grid-template-columns: 450px 1fr;
-            }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            padding: 24px;
-            box-shadow: var(--shadow);
-        }
-
-        .card-title {
-            font-size: 1.2rem;
-            margin-bottom: 16px;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        textarea {
-            width: 100%;
-            height: 160px;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            resize: vertical;
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        textarea:focus {
-            border-color: var(--primary);
-        }
-
-        button {
-            width: 100%;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: var(--primary-hover);
-        }
-
-        button:disabled {
-            background-color: #94a3b8;
-            cursor: not-allowed;
-        }
-
-        /* Results / Dashboard Panel Styles */
-        .results-panel {
-            display: none; /* Controlled via JS */
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .score-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-        }
-
-        .metric-box {
-            background: #f1f5f9;
-            padding: 16px;
-            border-radius: 8px;
-            text-align: center;
-            border-left: 4px solid var(--primary);
-        }
-
-        .metric-box.high-score { border-left-color: var(--success); }
-        .metric-box.mid-score { border-left-color: var(--warning); }
-        .metric-box.low-score { border-left-color: var(--danger); }
-
-        .metric-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-top: 4px;
-        }
-
-        /* Tab Layout Mechanics */
-        .tabs-header {
-            display: flex;
-            border-bottom: 2px solid var(--border);
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .tab-btn {
-            background: none;
-            color: var(--text-muted);
-            border: none;
-            padding: 10px 4px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            width: auto;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            border-radius: 0;
-        }
-
-        .tab-btn:hover { color: var(--primary); background: none; }
-        .tab-btn.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-            font-weight: 600;
-        }
-
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Meta Tag Badges */
-        .badge-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
-            margin-bottom: 16px;
-        }
-
-        .badge {
-            background: #e2e8f0;
-            color: #334155;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .badge.skill { background: #dbeafe; color: #1e40af; }
-        .badge.cert { background: #fef9c3; color: #854d0e; }
-
-        /* Analysis Lists */
-        .analysis-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .analysis-list li {
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .list-strength li { background: #f0fdf4; color: #166534; }
-        .list-strength li::before { content: "✓"; font-weight: bold; }
-        
-        .list-gap li { background: #fef2f2; color: #991b1b; }
-        .list-gap li::before { content: "⚠️"; }
-
-        .list-questions li { background: #f8fafc; color: var(--text-main); border: 1px solid var(--border); }
-        .list-questions li::before { content: "💬"; }
-
-        .summary-text {
-            color: var(--text-muted);
-            font-size: 1rem;
-            line-height: 1.6;
-            margin-bottom: 16px;
-        }
-
-        /* Interaction feedback states */
-        .loading-state {
-            display: none;
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
-        }
-
-        .spinner {
-            border: 4px solid rgba(0,0,0,0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: var(--primary);
-            animation: spin 1s linear infinite;
-            margin: 0 auto 12px auto;
-        }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .placeholder-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-muted);
-            border: 2px dashed var(--border);
-            border-radius: var(--radius);
-        }
-    </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-    <header>
-        <h1>AI Recruiting Assistant</h1>
-        <p>Analyze applicant resumes and match qualifications against target roles instantly.</p>
+<!-- ============================================================
+     API KEY MODAL
+     ============================================================ -->
+<div id="api-key-modal" class="modal-overlay">
+  <div class="api-modal-box">
+    <div class="api-modal-icon">🤖</div>
+    <h2>HireAI</h2>
+    <p>Your AI-powered recruiting assistant</p>
+    <p class="tagline">Powered by Google Gemini &nbsp;·&nbsp; <a href="https://aistudio.google.com/app/apikey" target="_blank">Get your free API key →</a></p>
+
+    <div class="form-group">
+      <label class="form-label" for="api-key-input">Gemini API Key</label>
+      <input
+        class="form-input"
+        id="api-key-input"
+        type="password"
+        placeholder="AIza..."
+        autocomplete="off"
+        style="font-size:0.9rem;"
+      />
+      <div class="form-hint">Your key is stored locally and never sent to any server other than Google's API.</div>
+    </div>
+
+    <button id="save-api-key-btn" class="btn btn-primary btn-lg btn-full" style="margin-top:0.5rem;">
+      ⚡ Launch HireAI
+    </button>
+
+    <div style="margin-top:1.25rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <div style="flex:1; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:0.625rem 0.875rem;">
+        <div style="font-size:0.7rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">✓ Privacy First</div>
+        <div style="font-size:0.72rem; color:#94A3B8;">All data stays in your browser</div>
+      </div>
+      <div style="flex:1; background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); border-radius:8px; padding:0.625rem 0.875rem;">
+        <div style="font-size:0.7rem; font-weight:700; color:#67E8F9; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">✓ No Backend</div>
+        <div style="font-size:0.72rem; color:#94A3B8;">Runs entirely in your browser</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     GENERIC MODAL (Job / Candidate Detail / etc.)
+     ============================================================ -->
+<div id="generic-modal" class="modal-overlay hidden">
+  <div class="modal-box" id="generic-modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="modal-close" id="modal-close-btn" aria-label="Close modal">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TOAST CONTAINER
+     ============================================================ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ============================================================
+     MAIN APP
+     ============================================================ -->
+<div id="app" class="app-container hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <div class="logo-mark">🤖</div>
+      <div>
+        <div style="display:flex; align-items:center; gap:0.375rem;">
+          <span class="logo-text">HireAI</span>
+          <span class="logo-badge">AI</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="sidebar-section-label">Overview</span>
+      <a class="nav-item active" data-view="dashboard" id="nav-dashboard" href="#" aria-current="page">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+
+      <span class="sidebar-section-label" style="margin-top:0.5rem;">Hiring</span>
+      <a class="nav-item" data-view="jobs" id="nav-jobs" href="#">
+        <span class="nav-icon">💼</span>
+        <span>Job Roles</span>
+        <span class="nav-badge" id="nav-jobs-badge">0</span>
+      </a>
+      <a class="nav-item" data-view="candidates" id="nav-candidates" href="#">
+        <span class="nav-icon">👥</span>
+        <span>Candidates</span>
+        <span class="nav-badge" id="nav-candidates-badge">0</span>
+      </a>
+
+      <span class="sidebar-section-label" style="margin-top:0.5rem;">AI Tools</span>
+      <a class="nav-item" data-view="evaluations" id="nav-evaluations" href="#">
+        <span class="nav-icon">⚖️</span>
+        <span>Evaluations</span>
+        <span class="nav-badge" id="nav-evaluations-badge">0</span>
+      </a>
+      <a class="nav-item" data-view="interview" id="nav-interview" href="#">
+        <span class="nav-icon">💬</span>
+        <span>Interview Prep</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-user" id="change-api-key-btn" title="Change API Key">
+        <div class="user-avatar">🔑</div>
+        <div class="user-info">
+          <div class="user-name">API Key Active</div>
+          <div class="user-role">Click to change</div>
+        </div>
+        <span class="user-settings">⚙</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" role="main">
+
+    <!-- Content Header -->
+    <header class="content-header">
+      <div class="header-left">
+        <div class="header-title" id="view-title">Dashboard</div>
+        <div class="header-subtitle" id="view-subtitle">Overview of your recruiting pipeline</div>
+      </div>
+      <div class="header-actions" id="header-actions"></div>
     </header>
 
-    <div class="main-container">
-        <!-- Input Form Section -->
-        <div class="card">
-            <div class="card-title">Evaluation Setup</div>
-            <form id="evaluationForm">
-                <div class="form-group">
-                    <label for="jobDescription">Job Description</label>
-                    <textarea id="jobDescription" placeholder="Paste the job requirements, necessary technical stack, and core qualifications here..." required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="resumeText">Candidate Resume</label>
-                    <textarea id="resumeText" placeholder="Paste the full plaintext content of the candidate's resume here..." required></textarea>
-                </div>
-                <button type="submit" id="submitBtn">Evaluate Profile</button>
-            </form>
+    <!-- ============================================================
+         VIEW: DASHBOARD
+         ============================================================ -->
+    <div id="view-dashboard" class="view active">
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card purple">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div class="stat-icon purple">👥</div>
+            <span class="stat-trend up" id="stat-candidates-trend">Active</span>
+          </div>
+          <div class="stat-value" id="stat-candidates">0</div>
+          <div class="stat-label">Total Candidates</div>
+        </div>
+        <div class="stat-card cyan">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div class="stat-icon cyan">💼</div>
+            <span class="stat-trend up" id="stat-jobs-trend">Open</span>
+          </div>
+          <div class="stat-value" id="stat-jobs">0</div>
+          <div class="stat-label">Active Roles</div>
+        </div>
+        <div class="stat-card green">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div class="stat-icon green">⚖️</div>
+            <span class="stat-trend neutral" id="stat-evals-trend">Done</span>
+          </div>
+          <div class="stat-value" id="stat-evals">0</div>
+          <div class="stat-label">Evaluations</div>
+        </div>
+        <div class="stat-card amber">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div class="stat-icon amber">🎯</div>
+            <span class="stat-trend up" id="stat-score-trend">Avg</span>
+          </div>
+          <div class="stat-value" id="stat-avg-score">—</div>
+          <div class="stat-label">Avg Match Score</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Top Candidates -->
+        <div class="section-container">
+          <div class="section-container-header">
+            <div class="section-title">
+              <div class="section-title-icon">🏆</div>
+              Top Ranked Candidates
+            </div>
+            <a class="btn btn-ghost btn-sm" data-view="evaluations" href="#">View All →</a>
+          </div>
+          <div id="top-candidates-table">
+            <div class="empty-state" style="padding: 2rem;">
+              <div class="empty-state-icon">🎯</div>
+              <h3>No evaluations yet</h3>
+              <p>Run candidate evaluations to see rankings here.</p>
+            </div>
+          </div>
         </div>
 
-        <!-- Analytical Output Workspace Panel -->
-        <div id="outputWorkspace">
-            <!-- Starting Visual Placeholder State -->
-            <div class="placeholder-state" id="placeholderView">
-                <p style="font-size: 1.1rem; font-weight: 500;">No Candidate Profile Analyzed Yet</p>
-                <p style="font-size: 0.9rem; margin-top: 4px;">Fill in the job details and applicant data on the left to review metrics.</p>
+        <!-- Activity + Quick Actions -->
+        <div style="display:flex; flex-direction:column; gap:1.25rem;">
+          <!-- Quick Actions -->
+          <div class="section-container">
+            <div class="section-title">
+              <div class="section-title-icon">⚡</div>
+              Quick Actions
             </div>
-
-            <!-- Loading Progression Spinner UI -->
-            <div class="card loading-state" id="loadingView">
-                <div class="spinner"></div>
-                <p>Parsing resume data and executing structured AI gap matching profile...</p>
+            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+              <button class="btn btn-secondary" style="justify-content:flex-start; gap:0.75rem;" data-view="jobs" id="qa-add-job">
+                <span>💼</span> Add a Job Role
+              </button>
+              <button class="btn btn-secondary" style="justify-content:flex-start; gap:0.75rem;" data-view="candidates" id="qa-upload-resume">
+                <span>📄</span> Upload Resumes
+              </button>
+              <button class="btn btn-secondary" style="justify-content:flex-start; gap:0.75rem;" data-view="evaluations" id="qa-evaluate">
+                <span>⚖️</span> Evaluate Candidates
+              </button>
+              <button class="btn btn-secondary" style="justify-content:flex-start; gap:0.75rem;" data-view="interview" id="qa-interview">
+                <span>💬</span> Generate Interview Qs
+              </button>
             </div>
+          </div>
 
-            <!-- Main Data Evaluation Display Panel -->
-            <div class="results-panel" id="resultsView">
-                <!-- Row: Calculated HR Analytics Summary Metrics -->
-                <div class="score-row">
-                    <div class="metric-box" id="scoreMetricCard">
-                        <label>Match Score</label>
-                        <div class="metric-value" id="uiMatchScore">0%</div>
-                    </div>
-                    <div class="metric-box">
-                        <label>Experience Found</label>
-                        <div class="metric-value" id="uiExperience">0 Yrs</div>
-                    </div>
-                </div>
+          <!-- Recent Activity -->
+          <div class="section-container" style="flex:1;">
+            <div class="section-title">
+              <div class="section-title-icon">📋</div>
+              Recent Activity
+            </div>
+            <div class="activity-list" id="activity-list">
+              <div class="empty-state" style="padding: 1.5rem;">
+                <div class="empty-state-icon" style="font-size:2rem;">📋</div>
+                <h3>No activity yet</h3>
+                <p>Your recent actions will appear here.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- ============================================================
+         VIEW: JOB ROLES
+         ============================================================ -->
+    <div id="view-jobs" class="view">
+
+      <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+        <div class="search-bar" style="flex:1; max-width:360px;">
+          <span class="search-icon">🔍</span>
+          <input class="form-input" id="jobs-search" type="text" placeholder="Search job roles..." />
+        </div>
+      </div>
+
+      <!-- Add Job Form (collapsible) -->
+      <div class="section-container" id="add-job-form-container" style="display:none;">
+        <div class="section-container-header">
+          <div class="section-title">
+            <div class="section-title-icon">➕</div>
+            New Job Role
+          </div>
+          <button class="modal-close" id="close-add-job-form">✕</button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="job-title-input">Job Title *</label>
+            <input class="form-input" id="job-title-input" type="text" placeholder="e.g. Senior Software Engineer" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="job-company-input">Company *</label>
+            <input class="form-input" id="job-company-input" type="text" placeholder="e.g. Acme Corp" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="job-department-input">Department</label>
+            <input class="form-input" id="job-department-input" type="text" placeholder="e.g. Engineering" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="job-location-input">Location</label>
+            <input class="form-input" id="job-location-input" type="text" placeholder="e.g. Remote / New York" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="job-description-input">Job Description *</label>
+          <textarea class="form-textarea" id="job-description-input" style="min-height:160px;" placeholder="Paste the full job description here. Include responsibilities, requirements, qualifications, preferred skills, etc."></textarea>
+          <div class="form-hint">AI will automatically extract required skills, experience, and qualifications.</div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.5rem;">
+          <button class="btn btn-secondary" id="cancel-add-job">Cancel</button>
+          <button class="btn btn-primary" id="submit-add-job">
+            <span id="add-job-btn-text">✨ Analyze & Create Role</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Jobs Grid -->
+      <div class="jobs-grid" id="jobs-grid">
+        <div class="empty-state" style="grid-column:1/-1; padding:4rem 2rem;">
+          <div class="empty-state-icon">💼</div>
+          <h3>No job roles yet</h3>
+          <p>Create your first job role to start evaluating candidates against job requirements.</p>
+          <button class="btn btn-primary" style="margin-top:1.25rem;" id="empty-add-job-btn">+ Add Job Role</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW: CANDIDATES
+         ============================================================ -->
+    <div id="view-candidates" class="view">
+
+      <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+        <div class="search-bar" style="flex:1; max-width:360px;">
+          <span class="search-icon">🔍</span>
+          <input class="form-input" id="candidates-search" type="text" placeholder="Search candidates..." />
+        </div>
+      </div>
+
+      <!-- Upload Zone -->
+      <div class="upload-zone" id="resume-upload-zone" style="margin-bottom:1.5rem;">
+        <input type="file" id="resume-file-input" accept=".pdf,.txt,.docx" multiple />
+        <div class="upload-icon">📄</div>
+        <h3>Drop resumes here or click to browse</h3>
+        <p>AI will automatically extract candidate details</p>
+        <div class="upload-formats" style="margin-top:1rem;">
+          <span class="tag tag-gray">PDF</span>
+          <span class="tag tag-gray">DOCX</span>
+          <span class="tag tag-gray">TXT</span>
+          <span class="tag tag-gray">Multiple files</span>
+        </div>
+      </div>
+
+      <!-- Upload Progress (hidden by default) -->
+      <div id="upload-progress-container" style="display:none; margin-bottom:1.5rem;">
+        <div class="section-container">
+          <div id="upload-progress-content"></div>
+        </div>
+      </div>
+
+      <!-- Candidates Grid -->
+      <div class="candidates-grid" id="candidates-grid">
+        <div class="empty-state" style="grid-column:1/-1; padding:3rem 2rem;">
+          <div class="empty-state-icon">👥</div>
+          <h3>No candidates yet</h3>
+          <p>Upload resumes above and AI will parse the candidate details automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW: EVALUATIONS
+         ============================================================ -->
+    <div id="view-evaluations" class="view">
+
+      <!-- Controls -->
+      <div class="section-container" style="margin-bottom:1.5rem;">
+        <div class="section-title" style="margin-bottom:1rem;">
+          <div class="section-title-icon">⚙️</div>
+          Evaluate Candidates
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr auto auto; gap:1rem; align-items:flex-end;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="eval-job-select">Job Role</label>
+            <select class="form-select" id="eval-job-select">
+              <option value="">Select a job role...</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="eval-candidate-select">Candidate</label>
+            <select class="form-select" id="eval-candidate-select">
+              <option value="">Select a candidate...</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="run-evaluation-btn">
+            ⚡ Evaluate
+          </button>
+          <button class="btn btn-secondary" id="run-all-evaluations-btn" title="Evaluate all candidates for selected job">
+            🔄 Evaluate All
+          </button>
+        </div>
+      </div>
+
+      <!-- Rank / Filter bar -->
+      <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+        <div class="form-group" style="margin-bottom:0; min-width:200px;">
+          <select class="form-select" id="eval-filter-job" style="font-size:0.85rem;">
+            <option value="">All Jobs</option>
+          </select>
+        </div>
+        <div style="margin-left:auto; font-size:0.85rem; color:var(--text-muted);" id="eval-count-label">0 evaluations</div>
+      </div>
+
+      <!-- Evaluations List -->
+      <div id="evaluations-list">
+        <div class="empty-state" style="padding:4rem 2rem;">
+          <div class="empty-state-icon">⚖️</div>
+          <h3>No evaluations yet</h3>
+          <p>Select a job role and candidate above, then click Evaluate to generate an AI-powered match analysis.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW: INTERVIEW PREP
+         ============================================================ -->
+    <div id="view-interview" class="view">
+
+      <!-- Setup -->
+      <div class="interview-setup">
+        <div class="section-title" style="margin-bottom:1rem;">
+          <div class="section-title-icon">💬</div>
+          Generate Interview Questions
+        </div>
+        <div class="interview-setup-grid">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="interview-job-select">Job Role</label>
+            <select class="form-select" id="interview-job-select">
+              <option value="">Select a job role...</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="interview-candidate-select">Candidate</label>
+            <select class="form-select" id="interview-candidate-select">
+              <option value="">Select a candidate...</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="generate-questions-btn">
+            ✨ Generate
+          </button>
+        </div>
+      </div>
+
+      <!-- Question Sets -->
+      <div id="interview-sets-list">
+        <div class="empty-state" style="padding:3rem 2rem;">
+          <div class="empty-state-icon">💬</div>
+          <h3>No interview questions yet</h3>
+          <p>Select a job role and candidate, then click Generate to create a tailored set of interview questions.</p>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- /main-content -->
+</div><!-- /app -->
+
+<!-- SVG Gradients for score rings (hidden) -->
+<svg style="width:0;height:0;position:absolute;" aria-hidden="true">
+  <defs>
+    <linearGradient id="score-gradient-excellent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="score-gradient-good" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+    <linearGradient id="score-gradient-fair" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#FCD34D"/>
+    </linearGradient>
+    <linearGradient id="score-gradient-poor" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#FCA5A5"/>
+    </linearGradient>
+    <linearGradient id="mini-gradient-excellent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="mini-gradient-good" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="mini-gradient-fair" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#FCD34D"/>
+    </linearGradient>
+    <linearGradient id="mini-gradient-poor" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#FCA5A5"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script src="app.js"></script>
+</body>
+</html>
