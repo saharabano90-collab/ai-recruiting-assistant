@@ -26,7 +26,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         body {
@@ -83,9 +83,7 @@
             font-weight: 600;
         }
 
-        .nav-section {
-            margin-bottom: 28px;
-        }
+        .nav-section { margin-bottom: 28px; }
 
         .nav-section-title {
             font-size: 0.7rem;
@@ -110,30 +108,12 @@
             transition: background 0.2s;
         }
 
-        .nav-item:hover {
-            background-color: var(--bg-hover);
-        }
+        .nav-item:hover { background-color: var(--bg-hover); }
+        .nav-item.active { background-color: var(--active-blue); font-weight: 500; }
+        .nav-label { display: flex; align-items: center; gap: 10px; }
+        .nav-badge { background-color: #2563eb; color: white; font-size: 0.75rem; padding: 1px 6px; border-radius: 10px; }
 
-        .nav-item.active {
-            background-color: var(--active-blue);
-            font-weight: 500;
-        }
-
-        .nav-label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-badge {
-            background-color: #2563eb;
-            color: white;
-            font-size: 0.75rem;
-            padding: 1px 6px;
-            border-radius: 10px;
-        }
-
-        /* Main Workspace Content */
+        /* Main Content Frame */
         main {
             flex-grow: 1;
             padding: 32px;
@@ -144,18 +124,10 @@
             width: 100%;
         }
 
-        header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
+        header h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
+        header p { color: var(--text-muted); font-size: 0.85rem; }
 
-        header p {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-
-        /* Top Analytical Row */
+        /* Metrics Display Grid */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -199,32 +171,12 @@
         .metric-status-badge.done { color: var(--status-done); }
         .metric-status-badge.avg { color: var(--status-avg); }
 
-        .metric-value {
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 4px;
-            line-height: 1;
-        }
+        .metric-value { font-size: 2.2rem; font-weight: 700; margin-bottom: 4px; line-height: 1; }
+        .metric-label { color: var(--text-muted); font-size: 0.85rem; }
 
-        .metric-label {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
+        .workspace-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 1024px) { .workspace-grid { grid-template-columns: 2fr 1fr; } }
 
-        /* Layout Grid for Split Panels */
-        .workspace-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 1024px) {
-            .workspace-grid {
-                grid-template-columns: 2fr 1fr;
-            }
-        }
-
-        /* Standalone Panels */
         .panel-card {
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -234,33 +186,10 @@
             flex-direction: column;
         }
 
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-        }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+        .panel-title { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .panel-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
 
-        .panel-title {
-            font-size: 1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .panel-link {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: color 0.2s;
-        }
-
-        .panel-link:hover {
-            color: var(--text-main);
-        }
-
-        /* Empty/Placeholder States */
         .empty-placeholder {
             flex-grow: 1;
             display: flex;
@@ -283,25 +212,10 @@
             font-size: 1.25rem;
         }
 
-        .placeholder-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
+        .placeholder-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+        .placeholder-desc { color: var(--text-muted); font-size: 0.85rem; max-width: 280px; }
 
-        .placeholder-desc {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            max-width: 280px;
-        }
-
-        /* Action Buttons/List styling */
-        .action-button-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
+        .action-button-list { display: flex; flex-direction: column; gap: 12px; }
         .action-btn {
             background-color: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border-color);
@@ -314,21 +228,41 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            transition: background 0.2s, border-color 0.2s;
+            transition: background 0.2s;
             width: 100%;
         }
 
-        .action-btn:hover {
-            background-color: var(--bg-hover);
-            border-color: #334155;
-        }
+        .action-btn:hover { background-color: var(--bg-hover); }
+        .action-icon { font-size: 1rem; opacity: 0.8; width: 16px; }
 
-        .action-icon {
-            font-size: 1rem;
-            opacity: 0.8;
-            width: 16px;
-            text-align: center;
+        /* Modular Action Panels Overlay (Modal) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            align-items: center; justify-content: center;
+            z-index: 100; padding: 20px;
         }
+        .modal-box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 100%; max-width: 500px;
+            padding: 24px; display: flex; flex-direction: column; gap: 16px;
+        }
+        .modal-box h3 { font-size: 1.2rem; font-weight: 600; }
+        .modal-form-group { display: flex; flex-direction: column; gap: 6px; }
+        .modal-form-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .modal-form-group input, .modal-form-group textarea, .modal-form-group select {
+            background-color: var(--bg-base); border: 1px solid var(--border-color);
+            color: var(--text-main); padding: 10px; border-radius: 6px; outline: none; font-size: 0.9rem;
+        }
+        .modal-form-group textarea { height: 100px; resize: none; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+        .btn-secondary { background: none; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .btn-primary { background-color: var(--primary); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #2563eb; font-weight: 600; }
+        .loading-text { font-size: 0.9rem; color: var(--status-open); display: none; text-align: center; }
     </style>
 </head>
 <body>
@@ -351,18 +285,4 @@
         <div class="nav-section">
             <div class="nav-section-title">Hiring</div>
             <a href="#" class="nav-item">
-                <span class="nav-label"><span class="action-icon">💼</span> Job Roles</span>
-                <span class="nav-badge">0</span>
-            </a>
-            <a href="#" class="nav-item">
-                <span class="nav-label"><span class="action-icon">👥</span> Candidates</span>
-                <span class="nav-badge">0</span>
-            </a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">AI Tools</div>
-            <a href="#" class="nav-item">
-                <span class="nav-label"><span class="action-icon">⚖️</span> Evaluations</span>
-                <span class="nav-badge">0</span>
-            </a>
+💼 Job Roles0👥 Candidates0AI Tools⚖️ Evaluations0💬 Interview PrepEstablish New Job PositionJob TitleDepartmentCore Requirements TextCancelSave PositionProcess Candidate EvaluationCandidate Full NameSelect Targeted Role-- No open positions configured --Resume File Asset⚡ AI is parsing document and running matching profiles...CancelRun Analysisconst BACKEND_URL = "http://localhost:8000/api";// Modal Open/Close Togglesfunction openModal(id) {document.getElementById(id).style.display = 'flex';if (id === 'resumeModal') { fetchAndPopulateRolesDropdown(); }}function closeModal(id) { document.getElementById(id).style.display = 'none'; }// Fetch position entries to build selection dropdowns dynamicallyasync function fetchAndPopulateRolesDropdown() {try {const response = await fetch(${BACKEND_URL}/roles);const roles = await response.json();const dropdown = document.getElementById('candidateRoleSelect');dropdown.innerHTML = roles.length === 0? '-- Setup a Job Role First --': roles.map(r => <option value="${r.id}">${r.title} (${r.department})</option>).join('');} catch (err) { console.error("Could not fetch target roles:", err); }}// Action Submission: Save Job Specification Rowsasync function submitJobRole() {const title = document.getElementById('roleTitle').value;const department = document.getElementById('roleDept').value;const requirements = document.getElementById('roleRequirements').value;if(!title || !requirements) { alert("Please populate Title and Requirements fields."); return; }try {await fetch(${BACKEND_URL}/roles, {method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({ title, department, requirements })});closeModal('roleModal');updateDashboardMetrics();} catch (err) { alert("Error connecting to Python backend."); }}// Action Submission: Form data handler parsing file inputsasync function handleResumeSubmissionPipeline() {const name = document.getElementById('candidateName').value;const roleId = document.getElementById('candidateRoleSelect').value;const fileInput = document.getElementById('resumeFile');if(!name || !roleId || fileInput.files.length === 0) {alert("Please fill in candidate details and attach a valid resume document.");return;}// Enter active background extraction statedocument.getElementById('processingLoader').style.display = 'block';document.getElementById('modalActionButtons').style.style = 'none';await processCandidatePipeline(name, roleId, fileInput.files[0]);// Clear loader UI state parametersdocument.getElementById('processingLoader').style.display = 'none';document.getElementById('modalActionButtons').style.display = 'flex';closeModal('resumeModal');}// 1. Refresh global dashboard numeric indicators automatically on layout initializationasync function updateDashboardMetrics() {try {const response = await fetch(${BACKEND_URL}/dashboard/metrics);const data = await response.json();// Update metric values across UI cardsdocument.querySelectorAll('.metric-card')[0].querySelector('.metric-value').innerText = data.counters.total_candidates;document.querySelectorAll('.metric-card')[1].querySelector('.metric-value').innerText = data.counters.active_roles;document.querySelectorAll('.metric-card')[2].querySelector('.metric-value').innerText = data.counters.evaluations;document.querySelectorAll('.metric-card')[3].querySelector('.metric-value').innerText = data.counters.avg_match_score;// Synchronize sub-badge counters on left nav menu paneldocument.getElementById('sidebarRolesCount').innerText = data.counters.active_roles;document.getElementById('sidebarCandidatesCount').innerText = data.counters.total_candidates;document.getElementById('sidebarEvalCount').innerText = data.counters.evaluations;// Render Top Ranked Candidates view space if data rows existconst panel = document.getElementById('rankedCandidatesPanel');if (data.top_ranked.length > 0 && panel) {let htmlList = <div style="width:100%; display:flex; flex-direction:column; gap:10px;">;data.top_ranked.forEach(candidate => {htmlList +=  <div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1e293b;"> <div> <div style="font-weight:600; color:#f8fafc;">${candidate.name}</div> <div style="font-size:0.8rem; color:#64748b;">Vacancy Match: ${candidate.role_title} • ${candidate.experience} Yrs Exp</div> </div> <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:4px 8px; border-radius:6px;">${candidate.score}% Match</div> </div>;});htmlList += </div>;panel.innerHTML =  <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div> ${htmlList};}} catch (err) {console.error("Dashboard connection sync error:", err);}}// 2. Programmatic hooks managing automated resume scanning execution flowsasync function processCandidatePipeline(candidateName, targetRoleId, resumeFileAsset) {const formData = new FormData();formData.append("name", candidateName);formData.append("role_id", targetRoleId);formData.append("file", resumeFileAsset);try {// Step A: Register the profile record assetsconst uploadRes = await fetch(${BACKEND_URL}/candidates/upload, { method: "POST", body: formData });if (!uploadRes.ok) throw new Error("Document structure text extraction stage failed.");const uploadData = await uploadRes.json();// Step B: Trigger AI Context evaluations loopsconst evalRes = await fetch(${BACKEND_URL}/candidates/${uploadData.candidate_id}/evaluate, { method: "POST" });if (!evalRes.ok) throw new Error("AI engine grading process error.");const completeMetrics = await evalRes.json();alert(Evaluation complete for ${completeMetrics.candidate_profile.name}!\nScore: ${completeMetrics.match_score}%);updateDashboardMetrics(); // Synchronize metric rows instantlyreturn completeMetrics;} catch (error) {alert(Recruiting workflow exception: ${error.message});}}// Initialize components when DOM cycles load safelywindow.addEventListener('DOMContentLoaded', updateDashboardMetrics);
