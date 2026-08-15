@@ -1,15 +1,23 @@
 import os
-import json
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+import io
+from typing import List, Dict, Any
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import pydantic_core
+
+# Document & Image Reading Libraries
 from pypdf import PdfReader
-from openai import OpenAI
-from pydantic import BaseModel, Field
-from typing import List
+from docx import Document
+from PIL import Image
 
-app = FastAPI()
+# Modern Gemini SDK
+from google import genai
+from google.genai import types
 
-# Enable CORS so your frontend can communicate with the backend
+app = FastAPI(title="AI Recruiting Assistant API")
+
+# Enable CORS for frontend connectivity
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,106 +26,136 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define the exact JSON structure we want OpenRouter to return
-class CandidateEvaluation(BaseModel):
-    candidate_name: str = Field(description="Full name of the candidate")
-    skills: List[str] = Field(description="Key skills found in the resume")
-    experience_years: int = Field(description="Estimated total years of professional experience")
-    match_score: int = Field(description="A score from 1 to 100 based on job fit")
-    summary: str = Field(description="A 2-3 sentence concise profile summary")
-    strengths: List[str] = Field(description="Key qualifications aligning with the job description")
-    gaps: List[str] = Field(description="Required job skills or experience missing from the resume")
-    interview_questions: List[str] = Field(description="3-4 targeted, role-specific questions to ask this candidate")
+# Initialize the Gemini Client (Ensure GEMINI_API_KEY environment variable is set)
+client = genai.Client()
 
-# Initialize OpenRouter Client (Expects OPENROUTER_API_KEY environment variable)
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.environ.get("OPENROUTER_API_KEY"),
-)
+# --- Pydantic Data Structures ---
+class CandidateProfile(BaseModel):
+    name: str
+    skills: List[str]
+    experience_years: float
+    education: List[str]
+    certifications: List[str]
 
-def extract_text_from_pdf(file: UploadFile) -> str:
-    """Helper function to parse text out of an uploaded PDF file."""
+class MatchEvaluation(BaseModel):
+    candidate_profile: CandidateProfile
+    match_score: int
+    summary: str
+    strengths: List[str]
+    gaps: List[str]
+    generated_interview_questions: List[str]
+
+
+# --- Document Extraction Functions ---
+
+def extract_text_from_pdf(file_bytes: bytes) -> str:
     try:
-        reader = PdfReader(file.file)
+        reader = PdfReader(io.BytesIO(file_bytes))
         text = ""
         for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-        return text.strip()
+            text += page.extract_text() or ""
+        return text
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to parse PDF file: {str(e)}")
 
-@app.get("/api")
-def read_root():
-    return {"status": "Backend API is running successfully!"}
-
-@app.get("/api/docs")
-def custom_docs():
-    return app.openapi()
-
-@app.post("/api/evaluate", response_model=CandidateEvaluation)
-async def evaluate_candidate(
-    job_description: str = Form(...),
-    resume_file: UploadFile = File(...)
-):
-    # 1. Parse the PDF
-    resume_text = extract_text_from_pdf(resume_file)
-    if not resume_text:
-        raise HTTPException(status_code=400, detail="Could not extract text from the provided resume PDF.")
-
-    # 2. Build the AI prompt embedding the required Pydantic schema structure
-    # Pydantic's model_json_schema() exports a clean JSON schema structure OpenRouter models can understand
-    json_schema_str = json.dumps(CandidateEvaluation.model_json_schema(), indent=2)
-    
-    prompt = f"""
-    You are an expert HR recruitment assistant. Analyze the candidate's Resume against the provided Job Description.
-    
-    JOB DESCRIPTION:
-    {job_description}
-    
-    CANDIDATE RESUME:
-    {resume_text}
-    
-    Task: Extract details, compare qualifications, identify strengths/gaps, score the candidate, and generate interview questions.
-    You MUST output valid JSON conforming exactly to this schema:
-    {json_schema_str}
-    """
-
+def extract_text_from_docx(file_bytes: bytes) -> str:
     try:
-        # 3. Request completion using OpenRouter's baseline JSON object validation
-        response = client.chat.completions.create(
-            model='google/gemini-2.5-flash',
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are a precise data extraction system. You must return RAW JSON matching the requested schema. No conversational filler, no markdown code blocks."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"}, 
-            temperature=0.1, # Reduced temperature for stricter formatting adherence
-        )
-        
-        response_text = response.choices[0].message.content.strip()
-        
-        # 4. Safe Parsing Cleanup
-        # If the model ignored the system prompt and wrapped the response in a markdown block, strip it.
-        if response_text.startswith("```"):
-            response_text = response_text.strip("```").strip("json").strip()
-            
-        parsed_json = json.loads(response_text)
-        
-        # Validate the keys strictly using Pydantic before sending it to the frontend
-        return CandidateEvaluation(**parsed_json)
-        
-    except json.JSONDecodeError as je:
-        raise HTTPException(
-            status_code=502, 
-            detail=f"OpenRouter returned unparseable text: {response_text}. Error: {str(je)}"
-        )
+        doc = Document(io.BytesIO(file_bytes))
+        return "\n".join([para.text for para in doc.paragraphs])
     except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"OpenRouter runtime error: {str(e)}"
+        raise HTTPException(status_code=400, detail=f"Failed to parse Word Document: {str(e)}")
+
+def extract_text_from_image(file_bytes: bytes) -> str:
+    """
+    Passes image bytes (PNG/JPG) directly into Gemini's multimodal 
+    engine to read the text content natively.
+    """
+    try:
+        image = Image.open(io.BytesIO(file_bytes))
+        ocr_prompt = "Extract and transcribe all readable text from this resume document accurately as raw text."
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[image, ocr_prompt]
         )
+        return response.text or ""
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse or run OCR on Image: {str(e)}")
+
+
+# --- Core AI Processing Logic ---
+
+def process_ai_evaluation(job_description: str, resume_text: str) -> MatchEvaluation:
+    if not job_description.strip() or not resume_text.strip():
+        raise HTTPException(status_code=400, detail="Job description or resume content cannot be blank.")
+
+    prompt = f"""
+    You are an expert HR AI Recruiting Assistant. Your task is to extract candidate details from the provided resume text, 
+    evaluate how well they match the job description, score them, and generate role-specific interview questions.
+
+    [JOB DESCRIPTION]
+    {job_description}
+
+    [CANDIDATE RESUME]
+    {resume_text}
+
+    Analyze the profiles objectively and follow the exact required JSON schema structure.
+    """
+    
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=MatchEvaluation,
+                temperature=0.2,
+            ),
+        )
+        return MatchEvaluation.model_validate_json(response.text)
+    except pydantic_core.ValidationError as ve:
+        raise HTTPException(status_code=500, detail=f"AI data did not match HR schema: {str(ve)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Service communication failure: {str(e)}")
+
+
+# --- API Endpoints ---
+
+@app.post("/api/evaluate-candidate", response_model=MatchEvaluation)
+async def evaluate_candidate_text(payload: dict):
+    """Fallback text submission endpoint"""
+    return process_ai_evaluation(payload.get("job_description", ""), payload.get("resume_text", ""))
+
+
+@app.post("/api/evaluate-file", response_model=MatchEvaluation)
+async def evaluate_candidate_file(
+    job_description: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Main file submission endpoint. Supports .pdf, .docx, and common image formats.
+    """
+    file_bytes = await file.read()
+    filename = file.filename.lower() if file.filename else ""
+    resume_text = ""
+
+    if filename.endswith('.pdf'):
+        resume_text = extract_text_from_pdf(file_bytes)
+    elif filename.endswith('.docx') or filename.endswith('.doc'):
+        resume_text = extract_text_from_docx(file_bytes)
+    elif filename.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+        resume_text = extract_text_from_image(file_bytes)
+    else:
+        raise HTTPException(
+            status_code=400, 
+            detail="Unsupported file extension. Please upload a PDF, Word document, or Image (PNG/JPG)."
+        )
+
+    if not resume_text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract any readable text from the uploaded document.")
+
+    return process_ai_evaluation(job_description, resume_text)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
