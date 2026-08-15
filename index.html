@@ -14,291 +14,153 @@
             --text-main: #f8fafc;
             --text-muted: #64748b;
             --border-color: #1e293b;
-            
-            /* Status Colors */
             --status-active: #10b981;
             --status-open: #3b82f6;
             --status-done: #64748b;
             --status-avg: #ec4899;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-base); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
-        body {
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Sidebar Styling */
-        aside {
-            width: 240px;
-            background-color: var(--bg-sidebar);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 24px 16px;
-            flex-shrink: 0;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 40px;
-            padding-left: 8px;
-        }
-
-        .logo-icon {
-            background: linear-gradient(135deg, #3b82f6, #ec4899);
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-
-        .logo-text {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.025em;
-        }
-
-        .logo-badge {
-            background-color: #1e3a8a;
-            color: #60a5fa;
-            font-size: 0.65rem;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
+        aside { width: 240px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; }
+        .logo-container { display: flex; align-items: center; gap: 8px; margin-bottom: 40px; padding-left: 8px; }
+        .logo-icon { background: linear-gradient(135deg, #3b82f6, #ec4899); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+        .logo-text { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.025em; }
+        .logo-badge { background-color: #1e3a8a; color: #60a5fa; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: 600; }
 
         .nav-section { margin-bottom: 28px; }
-
-        .nav-section-title {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            padding-left: 8px;
-            font-weight: 700;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            border-radius: 8px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-            transition: background 0.2s;
-        }
-
+        .nav-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 12px; padding-left: 8px; font-weight: 700; }
+        .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; color: var(--text-main); text-decoration: none; font-size: 0.9rem; margin-bottom: 4px; transition: background 0.2s; }
         .nav-item:hover { background-color: var(--bg-hover); }
         .nav-item.active { background-color: var(--active-blue); font-weight: 500; }
         .nav-label { display: flex; align-items: center; gap: 10px; }
         .nav-badge { background-color: #2563eb; color: white; font-size: 0.75rem; padding: 1px 6px; border-radius: 10px; }
 
-        /* Main Content Frame */
-        main {
-            flex-grow: 1;
-            padding: 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            max-width: 1400px;
-            width: 100%;
-        }
-
+        main { flex-grow: 1; padding: 32px; display: flex; flex-direction: column; gap: 24px; max-width: 1400px; width: 100%; }
         header h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
         header p { color: var(--text-muted); font-size: 0.85rem; }
 
-        /* Metrics Display Grid */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-        }
-
-        .metric-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .card-header-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(255,255,255,0.05);
-            margin-bottom: 16px;
-        }
-
-        .metric-status-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            background-color: rgba(255, 255, 255, 0.05);
-            font-weight: 500;
-        }
-
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .metric-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; position: relative; }
+        .card-header-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.05); margin-bottom: 16px; }
+        
+        .metric-status-badge { position: absolute; top: 20px; right: 20px; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background-color: rgba(255, 255, 255, 0.05); font-weight: 500; }
         .metric-status-badge.active { color: var(--status-active); }
         .metric-status-badge.open { color: var(--status-open); }
         .metric-status-badge.done { color: var(--status-done); }
         .metric-status-badge.avg { color: var(--status-avg); }
-
         .metric-value { font-size: 2.2rem; font-weight: 700; margin-bottom: 4px; line-height: 1; }
         .metric-label { color: var(--text-muted); font-size: 0.85rem; }
 
         .workspace-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
         @media (min-width: 1024px) { .workspace-grid { grid-template-columns: 2fr 1fr; } }
 
-        .panel-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-        }
-
+        .panel-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; }
         .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
         .panel-title { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .panel-link { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
 
-        .empty-placeholder {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .placeholder-icon {
-            width: 48px;
-            height: 48px;
-            background-color: rgba(236, 72, 153, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 16px;
-            font-size: 1.25rem;
-        }
-
+        .empty-placeholder { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; }
+        .placeholder-icon { width: 48px; height: 48px; background-color: rgba(236, 72, 153, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 1.25rem; }
         .placeholder-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
         .placeholder-desc { color: var(--text-muted); font-size: 0.85rem; max-width: 280px; }
 
         .action-button-list { display: flex; flex-direction: column; gap: 12px; }
-        .action-btn {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 14px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            text-align: left;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: background 0.2s;
-            width: 100%;
-        }
-
+        .action-btn { background-color: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); color: var(--text-main); padding: 14px 16px; border-radius: 8px; font-size: 0.9rem; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: background 0.2s; width: 100%; }
         .action-btn:hover { background-color: var(--bg-hover); }
         .action-icon { font-size: 1rem; opacity: 0.8; width: 16px; }
 
-        /* Modular Action Panels Overlay (Modal) */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            align-items: center; justify-content: center;
-            z-index: 100; padding: 20px;
-        }
-        .modal-box {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            width: 100%; max-width: 500px;
-            padding: 24px; display: flex; flex-direction: column; gap: 16px;
-        }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        .modal-box { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; width: 100%; max-width: 500px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
         .modal-box h3 { font-size: 1.2rem; font-weight: 600; }
         .modal-form-group { display: flex; flex-direction: column; gap: 6px; }
         .modal-form-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-        .modal-form-group input, .modal-form-group textarea, .modal-form-group select {
-            background-color: var(--bg-base); border: 1px solid var(--border-color);
-            color: var(--text-main); padding: 10px; border-radius: 6px; outline: none; font-size: 0.9rem;
-        }
+        .modal-form-group input, .modal-form-group textarea, .modal-form-group select { background-color: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 6px; outline: none; font-size: 0.9rem; }
         .modal-form-group textarea { height: 100px; resize: none; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
         .btn-secondary { background: none; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-        .btn-primary { background-color: var(--primary); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #2563eb; font-weight: 600; }
-        .loading-text { font-size: 0.9rem; color: var(--status-open); display: none; text-align: center; }
+        .btn-primary { background-color: #2563eb; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .loading-text { font-size: 0.9rem; color: #3b82f6; display: none; text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Layout Frame -->
     <aside>
         <div class="logo-container">
             <div class="logo-icon">H</div>
             <span class="logo-text">HireAI</span>
             <span class="logo-badge">AI</span>
         </div>
-
         <div class="nav-section">
             <div class="nav-section-title">Overview</div>
-            <a href="#" class="nav-item active">
-                <span class="nav-label"><span class="action-icon">📊</span> Dashboard</span>
-            </a>
+            <a href="#" class="nav-item active"><span class="nav-label">📊 Dashboard</span></a>
         </div>
-
         <div class="nav-section">
             <div class="nav-section-title">Hiring</div>
-            <a href="#" class="nav-item">
-    <!-- ... Rest of your dashboard body code remains unchanged here ... -->
+            <a href="#" class="nav-item"><span class="nav-label">💼 Job Roles</span><span class="nav-badge" id="sidebarRolesCount">0</span></a>
+            <a href="#" class="nav-item"><span class="nav-label">👥 Candidates</span><span class="nav-badge" id="sidebarCandidatesCount">0</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">AI Tools</div>
+            <a href="#" class="nav-item"><span class="nav-label">⚖️ Evaluations</span><span class="nav-badge" id="sidebarEvalCount">0</span></a>
+            <a href="#" class="nav-item"><span class="nav-label">💬 Interview Prep</span></a>
+        </div>
+    </aside>
 
-    <!-- 1. Ensure your script tag opens cleanly before any Javascript execution -->
+    <main>
+        <header>
+            <h1>Dashboard</h1>
+            <p>Overview of your recruiting pipeline</p>
+        </header>
+
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="card-header-icon" style="color: #818cf8;">👥</div>
+                <span class="metric-status-badge active">Active</span>
+                <div class="metric-value" id="valTotalCandidates">0</div>
+                <div class="metric-label">Total Candidates</div>
+            </div>
+            <div class="metric-card">
+                <div class="card-header-icon" style="color: #fb923c;">💼</div>
+                <span class="metric-status-badge open">Open</span>
+                <div class="metric-value" id="valActiveRoles">0</div>
+                <div class="metric-label">Active Roles</div>
+            </div>
+            <div class="metric-card">
+                <div class="card-header-icon" style="color: #facc15;">⚖️</div>
+                <span class="metric-status-badge done">Done</span>
+                <div class="metric-value" id="valEvaluations">0</div>
+                <div class="metric-label">Evaluations</div>
+            </div>
+            <div class="metric-card">
+                <div class="card-header-icon" style="color: #f472b6;">🎯</div>
+                <span class="metric-status-badge avg">Avg</span>
+                <div class="metric-value" id="valAvgScore">—</div>
+                <div class="metric-label">Avg Match Score</div>
+            </div>
+        </section>
+
+        <div class="workspace-grid">
+            <section class="panel-card" id="rankedCandidatesPanel">
+                <div class="panel-header">
+                    <h2 class="panel-title">🏆 Top Ranked Candidates</h2>
+### ⚡ Part 3: Dashboard Integration JavaScript
+Paste this final snippet directly below Part 2. This resolves the `.querySelector` loop bugs, handles state variables, and interfaces directly with your FastAPI server pipeline.
+
+```html
     <script>
         const BACKEND_URL = "http://localhost:8000/api";
 
-        // Modal Open/Close Toggles
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
             if (id === 'resumeModal') { fetchAndPopulateRolesDropdown(); }
         }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+        }
 
-        // Fetch position entries to build selection dropdowns dynamically
         async function fetchAndPopulateRolesDropdown() {
             try {
                 const response = await fetch(`${BACKEND_URL}/roles`);
@@ -310,7 +172,6 @@
             } catch (err) { console.error("Could not fetch target roles:", err); }
         }
 
-        // Action Submission: Save Job Specification Rows
         async function submitJobRole() {
             const title = document.getElementById('roleTitle').value;
             const department = document.getElementById('roleDept').value;
@@ -329,7 +190,6 @@
             } catch (err) { alert("Error connecting to Python backend."); }
         }
 
-        // Action Submission: Form data handler parsing file inputs
         async function handleResumeSubmissionPipeline() {
             const name = document.getElementById('candidateName').value;
             const roleId = document.getElementById('candidateRoleSelect').value;
@@ -340,36 +200,32 @@
                 return;
             }
 
-            // Enter active background extraction state
             document.getElementById('processingLoader').style.display = 'block';
             document.getElementById('modalActionButtons').style.display = 'none';
 
+            // Send index reference to target array safely
             await processCandidatePipeline(name, roleId, fileInput.files[0]);
 
-            // Clear loader UI state parameters
             document.getElementById('processingLoader').style.display = 'none';
             document.getElementById('modalActionButtons').style.display = 'flex';
             closeModal('resumeModal');
         }
 
-        // Refresh global dashboard numeric indicators automatically on layout initialization
         async function updateDashboardMetrics() {
             try {
                 const response = await fetch(`${BACKEND_URL}/dashboard/metrics`);
                 const data = await response.json();
                 
-                // Update metric values across UI cards
-                document.querySelectorAll('.metric-card')[0].querySelector('.metric-value').innerText = data.counters.total_candidates;
-                document.querySelectorAll('.metric-card')[1].querySelector('.metric-value').innerText = data.counters.active_roles;
-                document.querySelectorAll('.metric-card')[2].querySelector('.metric-value').innerText = data.counters.evaluations;
-                document.querySelectorAll('.metric-card')[3].querySelector('.metric-value').innerText = data.counters.avg_match_score;
+                // Fixed ID references resolving the previous query loop exceptions
+                document.getElementById('valTotalCandidates').innerText = data.counters.total_candidates;
+                document.getElementById('valActiveRoles').innerText = data.counters.active_roles;
+                document.getElementById('valEvaluations').innerText = data.counters.evaluations;
+                document.getElementById('valAvgScore').innerText = data.counters.avg_match_score;
                 
-                // Synchronize sub-badge counters on left nav menu panel
                 document.getElementById('sidebarRolesCount').innerText = data.counters.active_roles;
                 document.getElementById('sidebarCandidatesCount').innerText = data.counters.total_candidates;
                 document.getElementById('sidebarEvalCount').innerText = data.counters.evaluations;
 
-                // Render Top Ranked Candidates view space if data rows exist
                 const panel = document.getElementById('rankedCandidatesPanel');
                 if (data.top_ranked.length > 0 && panel) {
                     let htmlList = `<div style="width:100%; display:flex; flex-direction:column; gap:10px;">`;
@@ -378,7 +234,7 @@
                             <div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1e293b;">
                                 <div>
                                     <div style="font-weight:600; color:#f8fafc;">${candidate.name}</div>
-                                    <div style="font-size:0.8rem; color:#64748b;">Vacancy Match: ${candidate.role_title} • ${candidate.experience} Yrs Exp</div>
+                                    <div style="font-size:0.8rem; color:#64748b;">Role Match: ${candidate.role_title} • ${candidate.experience} Yrs Exp</div>
                                 </div>
                                 <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:4px 8px; border-radius:6px;">${candidate.score}% Match</div>
                             </div>`;
@@ -393,7 +249,6 @@
             }
         }
 
-        // Programmatic hooks managing automated resume scanning execution flows
         async function processCandidatePipeline(candidateName, targetRoleId, resumeFileAsset) {
             const formData = new FormData();
             formData.append("name", candidateName);
@@ -401,26 +256,23 @@
             formData.append("file", resumeFileAsset);
 
             try {
-                // Step A: Register the profile record assets
                 const uploadRes = await fetch(`${BACKEND_URL}/candidates/upload`, { method: "POST", body: formData });
                 if (!uploadRes.ok) throw new Error("Document structure text extraction stage failed.");
                 const uploadData = await uploadRes.json();
                 
-                // Step B: Trigger AI Context evaluations loops
                 const evalRes = await fetch(`${BACKEND_URL}/candidates/${uploadData.candidate_id}/evaluate`, { method: "POST" });
                 if (!evalRes.ok) throw new Error("AI engine grading process error.");
                 const completeMetrics = await evalRes.json();
                 
                 alert(`Evaluation complete for ${completeMetrics.candidate_profile.name}!\nScore: ${completeMetrics.match_score}%`);
-                updateDashboardMetrics(); // Synchronize metric rows instantly
+                updateDashboardMetrics(); 
                 return completeMetrics;
             } catch (error) {
                 alert(`Recruiting workflow exception: ${error.message}`);
             }
         }
 
-        // Initialize components when DOM cycles load safely
         window.addEventListener('DOMContentLoaded', updateDashboardMetrics);
-    </script> <!-- 2. Close your script block cleanly here before the body ends -->
+    </script>
 </body>
 </html>
