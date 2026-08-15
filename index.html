@@ -416,202 +416,283 @@
     </div>
 
     <script>
-        <!-- Keep all your existing HTML/CSS style structures from before exactly the same, just change the <script> section below -->
-<script>
-    // 1. Shift connection variable path to match relative Vercel serverless routing 
-    const BACKEND_URL = "/api";
+        const BACKEND_URL = "http://localhost:8000/api";
+        let activeTab = 'dashboard';
 
-    // Initialize state metrics directly out of user browser local storage caches
-    let JOB_ROLES = JSON.parse(localStorage.getItem('hireai_roles')) || [];
-    let CANDIDATES = JSON.parse(localStorage.getItem('hireai_candidates')) || [];
-    let activeTab = 'dashboard';
+        function switchView(targetTab) {
+            activeTab = targetTab;
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            const metricsGrid = document.querySelector('.metrics-grid');
+            const workspaceGrid = document.querySelector('.workspace-grid');
+            const oldView = document.getElementById('dynamicViewWrapper');
+            if (oldView) oldView.remove();
 
-    function openModal(id) {
-        document.getElementById(id).style.display = 'flex';
-        if (id === 'resumeModal') { populateRolesDropdownMenu(); }
-    }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+            if (targetTab === 'dashboard') {
+                metricsGrid.style.display = 'grid';
+                workspaceGrid.style.display = 'grid';
+                document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+                updateDashboardMetrics();
+            } else {
+                metricsGrid.style.display = 'none';
+                workspaceGrid.style.display = 'none';
+                
+                if (targetTab === 'roles') document.querySelectorAll('.nav-section')[1].querySelectorAll('.nav-item')[0].classList.add('active');
+                if (targetTab === 'candidates') document.querySelectorAll('.nav-section')[1].querySelectorAll('.nav-item')[1].classList.add('active');
+                if (targetTab === 'evaluations') document.querySelectorAll('.nav-section')[2].querySelectorAll('.nav-item')[0].classList.add('active');
+                if (targetTab === 'prep') document.querySelectorAll('.nav-section')[2].querySelectorAll('.nav-item')[1].classList.add('active');
 
-    function populateRolesDropdownMenu() {
-        const dropdown = document.getElementById('candidateRoleSelect');
-        dropdown.innerHTML = JOB_ROLES.length === 0 
-            ? '<option value="">-- Setup a Job Role First --</option>'
-            : JOB_ROLES.map(r => `<option value="${r.id}">${r.title} (${r.department})</option>`).join('');
-    }
+                const viewContainer = document.createElement('section');
+                viewContainer.id = 'dynamicViewWrapper';
+                viewContainer.className = 'panel-card';
+                viewContainer.style.marginTop = '8px';
 
-    // Save job criteria to local storage instantly
-    function submitJobRole() {
-        const title = document.getElementById('roleTitle').value;
-        const department = document.getElementById('roleDept').value;
-        const requirements = document.getElementById('roleRequirements').value;
-
-        if(!title || !requirements) { alert("Please complete Title and Requirements fields."); return; }
-
-        const newRole = { id: 'role_' + Math.random().toString(36).substr(2, 4), title, department, requirements };
-        JOB_ROLES.push(newRole);
-        localStorage.setItem('hireai_roles', JSON.stringify(JOB_ROLES));
-
-        closeModal('roleModal');
-        if (activeTab === 'roles') renderRolesTabContent();
-        updateDashboardMetrics();
-    }
-
-    // Direct Multipart Streaming Pipeline to Serverless functions
-    async function handleResumeSubmissionPipeline() {
-        const name = document.getElementById('candidateName').value;
-        const roleId = document.getElementById('candidateRoleSelect').value;
-        const fileInput = document.getElementById('resumeFile');
-
-        if(!name || !roleId || fileInput.files.length === 0) {
-            alert("Fill in all candidate details and upload a resume."); return;
+                if (targetTab === 'roles') {
+                    viewContainer.innerHTML = `
+                        <div class="panel-header"><h2 class="panel-title">💼 Active Job Positions</h2><button class="btn-primary" style="padding:6px 12px; font-size:0.85rem;" onclick="openModal('roleModal')">+ Add Role</button></div>
+                        <div id="rolesListTarget" style="display:flex; flex-direction:column; gap:12px; margin-top:12px; color:var(--text-muted);">Loading active openings...</div>`;
+                    document.querySelector('main').appendChild(viewContainer);
+                    renderRolesTabContent();
+                } 
+                else if (targetTab === 'candidates') {
+                    viewContainer.innerHTML = `
+                        <div class="panel-header"><h2 class="panel-title">👥 Registered Applicants</h2><button class="btn-primary" style="padding:6px 12px; font-size:0.85rem;" onclick="openModal('resumeModal')">+ Evaluate New</button></div>
+                        <div id="candidatesListTarget" style="display:flex; flex-direction:column; gap:12px; margin-top:12px; color:var(--text-muted);">Loading system applicant database...</div>`;
+                    document.querySelector('main').appendChild(viewContainer);
+                    renderCandidatesTabContent();
+                }
+                else if (targetTab === 'evaluations') {
+                    viewContainer.innerHTML = `
+                        <div class="panel-header"><h2 class="panel-title">⚖️ AI Match Evaluations</h2></div>
+                        <div id="evaluationsListTarget" style="display:flex; flex-direction:column; gap:12px; margin-top:12px; color:var(--text-muted);">Loading detailed scoring profiles...</div>`;
+                    document.querySelector('main').appendChild(viewContainer);
+                    renderEvaluationsTabContent();
+                }
+                else if (targetTab === 'prep') {
+                    viewContainer.innerHTML = `
+                        <div class="panel-header"><h2 class="panel-title">💬 Automated Interview Prep Cards</h2></div>
+                        <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+                            <div style="font-size:2rem; margin-bottom:10px;">💬</div>
+                            <p style="font-weight:600; color:var(--text-main);">AI Question Banks Ready</p>
+                            <p style="font-size:0.85rem; margin-top:4px;">Upload and process candidate profiles to see tailored interview questions here.</p>
+                        </div>`;
+                    document.querySelector('main').appendChild(viewContainer);
+                }
+            }
         }
 
-        const linkedRole = JOB_ROLES.find(r => r.id === roleId);
-        if(!linkedRole) { alert("Selected vacancy context error."); return; }
+        function initializeSidebarNavigationClickListeners() {
+            const dashboardBtn = document.querySelectorAll('.nav-section')[0].querySelector('.nav-item');
+            const rolesBtn = document.querySelectorAll('.nav-section')[1].querySelectorAll('.nav-item')[0];
+            const candidatesBtn = document.querySelectorAll('.nav-section')[1].querySelectorAll('.nav-item')[1];
+            const evalBtn = document.querySelectorAll('.nav-section')[2].querySelectorAll('.nav-item')[0];
+            const prepBtn = document.querySelectorAll('.nav-section')[2].querySelectorAll('.nav-item')[1];
 
-        document.getElementById('processingLoader').style.display = 'block';
-        document.getElementById('modalActionButtons').style.display = 'none';
+            dashboardBtn.addEventListener('click', (e) => { e.preventDefault(); switchView('dashboard'); });
+            rolesBtn.addEventListener('click', (e) => { e.preventDefault(); switchView('roles'); });
+            candidatesBtn.addEventListener('click', (e) => { e.preventDefault(); switchView('candidates'); });
+            evalBtn.addEventListener('click', (e) => { e.preventDefault(); switchView('evaluations'); });
+            prepBtn.addEventListener('click', (e) => { e.preventDefault(); switchView('prep'); });
+        }
 
-        try {
-            const formData = new FormData();
-            formData.append("job_requirements", linkedRole.requirements);
-            formData.append("file", fileInput.files[0]);
+        async function renderRolesTabContent() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/roles`);
+                const roles = await response.json();
+                const target = document.getElementById('rolesListTarget');
+                if(roles.length === 0) {
+                    target.innerHTML = `<div style="text-align:center; padding:20px;">No roles listed yet. Click "+ Add Role" to create one.</div>`;
+                    return;
+                }
+                target.innerHTML = roles.map(r => `
+                    <div style="background:rgba(255,255,255,0.02); padding:16px; border-radius:8px; border:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:600; color:var(--text-main); font-size:1.05rem;">${r.title}</div>
+                            <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">Department: ${r.department} • Ref: #${r.id}</div>
+                            <div style="font-size:0.85rem; color:var(--text-main); margin-top:8px; opacity:0.8;">${r.requirements}</div>
+                        </div>
+                    </div>`).join('');
+            } catch (err) { console.error(err); }
+        }
 
-            const response = await fetch(`${BACKEND_URL}/evaluate-direct-file`, {
-                method: 'POST',
-                body: formData
-            });
+        async function renderCandidatesTabContent() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/dashboard/metrics`);
+                const data = await response.json();
+                const target = document.getElementById('candidatesListTarget');
+                if(data.top_ranked.length === 0) {
+                    target.innerHTML = `<div style="text-align:center; padding:20px;">No candidate records found. Use "+ Evaluate New" to upload resumes.</div>`;
+                    return;
+                }
+                target.innerHTML = data.top_ranked.map(c => `
+                    <div style="background:rgba(255,255,255,0.02); padding:16px; border-radius:8px; border:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:600; color:var(--text-main); font-size:1.05rem;">${c.name}</div>
+                            <div style="font-size:0.85rem; color:#64748b; margin-top:2px;">Target Position: ${c.role_title} • ${c.experience} Years Experience</div>
+                        </div>
+                        <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem;" onclick="switchView('evaluations')">View Evaluation</button>
+                    </div>`).join('');
+            } catch (err) { console.error(err); }
+        }
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.detail || "Serverless analysis fault.");
+        async function renderEvaluationsTabContent() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/dashboard/metrics`);
+                const data = await response.json();
+                const target = document.getElementById('evaluationsListTarget');
+                if(data.top_ranked.length === 0) {
+                    target.innerHTML = `<div style="text-align:center; padding:20px;">No completed evaluations. Run a profile assessment via the dashboard actions.</div>`;
+                    return;
+                }
+                target.innerHTML = data.top_ranked.map(c => `
+                    <div style="background:rgba(255,255,255,0.02); padding:16px; border-radius:8px; border:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:600; color:var(--text-main); font-size:1.05rem;">${c.name}</div>
+                            <div style="font-size:0.85rem; color:#64748b; margin-top:2px;">Applied Position: ${c.role_title}</div>
+                        </div>
+                        <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:6px;">${c.score}% Match Score</div>
+                    </div>`).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            if (id === 'resumeModal') { fetchAndPopulateRolesDropdown(); }
+        }
+        
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+        }
+
+        async function fetchAndPopulateRolesDropdown() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/roles`);
+                const roles = await response.json();
+                const dropdown = document.getElementById('candidateRoleSelect');
+                dropdown.innerHTML = roles.length === 0 
+                    ? '<option value="">-- Setup a Job Role First --</option>'
+                    : roles.map(r => `<option value="${r.id}">${r.title} (${r.department})</option>`).join('');
+            } catch (err) { console.error("Could not fetch target roles:", err); }
+        }
+
+        async function submitJobRole() {
+            const title = document.getElementById('roleTitle').value;
+            const department = document.getElementById('roleDept').value;
+            const requirements = document.getElementById('roleRequirements').value;
+
+            if(!title || !requirements) { alert("Please populate Title and Requirements fields."); return; }
+
+            try {
+                await fetch(`${BACKEND_URL}/roles`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title, department, requirements })
+                });
+                closeModal('roleModal');
+                
+                if (activeTab === 'roles') renderRolesTabContent();
+                updateDashboardMetrics();
+            } catch (err) { alert("Error connecting to Python backend."); }
+        }
+
+        async function handleResumeSubmissionPipeline() {
+            const name = document.getElementById('candidateName').value;
+            const roleId = document.getElementById('candidateRoleSelect').value;
+            const fileInput = document.getElementById('resumeFile');
+
+            if(!name || !roleId || fileInput.files.length === 0) {
+                alert("Please fill in candidate details and attach a valid resume document.");
+                return;
             }
 
-            const aiResult = await response.json();
-            
-            // Commit candidate metadata properties inside local state lists
-            const candidateRecord = {
-                id: 'cand_' + Math.random().toString(36).substr(2, 4),
-                name: name,
-                role_title: linkedRole.title,
-                experience: aiResult.candidate_profile.experience_years,
-                score: aiResult.match_score,
-                details: aiResult
-            };
+            document.getElementById('processingLoader').style.display = 'block';
+            document.getElementById('modalActionButtons').style.display = 'none';
 
-            CANDIDATES.push(candidateRecord);
-            localStorage.setItem('hireai_candidates', JSON.stringify(CANDIDATES));
+            await processCandidatePipeline(name, roleId, fileInput.files[0]);
 
-            alert(`AI Analysis Completed for ${name}!\nFit Match Score: ${aiResult.match_score}%`);
-            
-            if (activeTab === 'candidates') renderCandidatesTabContent();
-            if (activeTab === 'evaluations') renderEvaluationsTabContent();
-            updateDashboardMetrics();
-
-        } catch (err) {
-            alert(`Recruiting Pipeline Error:\n${err.message}`);
-        } finally {
             document.getElementById('processingLoader').style.display = 'none';
             document.getElementById('modalActionButtons').style.display = 'flex';
             closeModal('resumeModal');
         }
-    }
 
-    function updateDashboardMetrics() {
-        const totalCandidates = CANDIDATES.length;
-        const activeRoles = JOB_ROLES.length;
-        const evaluations = CANDIDATES.length; // Profiles assessed
-        
-        let avgScoreStr = "—";
-        if (totalCandidates > 0) {
-            const totalScore = CANDIDATES.reduce((sum, c) => sum + c.score, 0);
-            avgScoreStr = `${Math.round(totalScore / totalCandidates)}%`;
-        }
+        async function updateDashboardMetrics() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/dashboard/metrics`);
+                const data = await response.json();
+                
+                document.getElementById('valTotalCandidates').innerText = data.counters.total_candidates;
+                document.getElementById('valActiveRoles').innerText = data.counters.active_roles;
+                document.getElementById('valEvaluations').innerText = data.counters.evaluations;
+                document.getElementById('valAvgScore').innerText = data.counters.avg_match_score;
+                
+                document.getElementById('sidebarRolesCount').innerText = data.counters.active_roles;
+                document.getElementById('sidebarCandidatesCount').innerText = data.counters.total_candidates;
+                document.getElementById('sidebarEvalCount').innerText = data.counters.evaluations;
 
-        document.getElementById('valTotalCandidates').innerText = totalCandidates;
-        document.getElementById('valActiveRoles').innerText = activeRoles;
-        document.getElementById('valEvaluations').innerText = evaluations;
-        document.getElementById('valAvgScore').innerText = avgScoreStr;
-        
-        document.getElementById('sidebarRolesCount').innerText = activeRoles;
-        document.getElementById('sidebarCandidatesCount').innerText = totalCandidates;
-        document.getElementById('sidebarEvalCount').innerText = evaluations;
-
-        const panel = document.getElementById('rankedCandidatesPanel');
-        if (panel) {
-            if (CANDIDATES.length > 0) {
-                // Sort candidates by match scores descending
-                const sorted = [...CANDIDATES].sort((a, b) => b.score - a.score);
-                let htmlList = `<div style="width:100%; display:flex; flex-direction:column; gap:10px;">`;
-                sorted.slice(0, 5).forEach(c => {
-                    htmlList += `
-                        <div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1e293b;">
-                            <div>
-                                <div style="font-weight:600; color:#f8fafc;">${c.name}</div>
-                                <div style="font-size:0.8rem; color:#64748b;">Vacancy: ${c.role_title} • ${c.experience} Yrs Exp</div>
-                            </div>
-                            <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:4px 8px; border-radius:6px;">${c.score}% Match</div>
-                        </div>`;
-                });
-                htmlList += `</div>`;
-                panel.innerHTML = `
-                    <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div>
-                    ${htmlList}`;
-            } else {
-                panel.innerHTML = `
-                    <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div>
-                    <div class="empty-placeholder">
-                        <div class="placeholder-icon">🎯</div>
-                        <div class="placeholder-title">No evaluations yet</div>
-                        <div class="placeholder-desc">Run candidate evaluations to see rankings here.</div>
-                    </div>`;
+                const panel = document.getElementById('rankedCandidatesPanel');
+                if (panel) {
+                    if (data.top_ranked.length > 0) {
+                        let htmlList = `<div style="width:100%; display:flex; flex-direction:column; gap:10px;">`;
+                        data.top_ranked.forEach(candidate => {
+                            htmlList += `
+                                <div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1e293b;">
+                                    <div>
+                                        <div style="font-weight:600; color:#f8fafc;">${candidate.name}</div>
+                                        <div style="font-size:0.8rem; color:#64748b;">Vacancy Match: ${candidate.role_title} • ${candidate.experience} Yrs Exp</div>
+                                    </div>
+                                    <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:4px 8px; border-radius:6px;">${candidate.score}% Match</div>
+                                </div>`;
+                        });
+                        htmlList += `</div>`;
+                        panel.innerHTML = `
+                            <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div>
+                            ${htmlList}`;
+                    } else {
+                        panel.innerHTML = `
+                            <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div>
+                            <div class="empty-placeholder">
+                                <div class="placeholder-icon">🎯</div>
+                                <div class="placeholder-title">No evaluations yet</div>
+                                <div class="placeholder-desc">Run candidate evaluations to see rankings here.</div>
+                            </div>`;
+                    }
+                }
+            } catch (err) {
+                console.error("Dashboard connection sync error:", err);
             }
         }
-    }
 
-    // View Panel Navigation Router Actions
-    function switchView(targetTab) {
-        activeTab = targetTab;
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        
-        const metricsGrid = document.querySelector('.metrics-grid');
-        const workspaceGrid = document.querySelector('.workspace-grid');
-        
-        const oldView = document.getElementById('dynamicViewWrapper');
-        if (oldView) oldView.remove();
+        async function processCandidatePipeline(candidateName, targetRoleId, resumeFileAsset) {
+            const formData = new FormData();
+            formData.append("name", candidateName);
+            formData.append("role_id", targetRoleId);
+            formData.append("file", resumeFileAsset);
 
-        if (targetTab === 'dashboard') {
-            metricsGrid.style.display = 'grid';
-            workspaceGrid.style.display = 'grid';
-            document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+            try {
+                const uploadRes = await fetch(`${BACKEND_URL}/candidates/upload`, { method: "POST", body: formData });
+                if (!uploadRes.ok) throw new Error("Document structure text extraction stage failed.");
+                const uploadData = await uploadRes.json();
+                
+                const evalRes = await fetch(`${BACKEND_URL}/candidates/${uploadData.candidate_id}/evaluate`, { method: "POST" });
+                if (!evalRes.ok) throw new Error("AI engine grading process error.");
+                const completeMetrics = await evalRes.json();
+                
+                alert(`Evaluation complete for ${completeMetrics.candidate_profile.name}!
+Score: ${completeMetrics.match_score}%`);
+                
+                if (activeTab === 'candidates') renderCandidatesTabContent();
+                if (activeTab === 'evaluations') renderEvaluationsTabContent();
+                updateDashboardMetrics(); 
+                return completeMetrics;
+            } catch (error) {
+                alert(`Recruiting workflow exception: ${error.message}`);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeSidebarNavigationClickListeners();
             updateDashboardMetrics();
-        } else {
-            metricsGrid.style.display = 'none';
-            workspaceGrid.style.display = 'none';
-
-            const viewContainer = document.createElement('section');
-            viewContainer.id = 'dynamicViewWrapper';
-            viewContainer.className = 'panel-card';
-            viewContainer.style.marginTop = '8px';
-
-            if (targetTab === 'roles') {
-                viewContainer.innerHTML = `
-                    <div class="panel-header"><h2 class="panel-title">💼 Active Job Positions</h2><button class="btn-primary" style="padding:6px 12px; font-size:0.85rem;" onclick="openModal('roleModal')">+ Add Role</button></div>
-                    <div id="rolesListTarget" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;"></div>`;
-                document.querySelector('main').appendChild(viewContainer);
-                renderRolesTabContent();
-            } 
-            else if (targetTab === 'candidates') {
-                viewContainer.innerHTML = `
-                    <div class="panel-header"><h2 class="panel-title">👥 Registered Applicants</h2><button class="btn-primary" style="padding:6px 12px; font-size:0.85rem;" onclick="openModal('resumeModal')">+ Evaluate New</button></div>
-                    <div id="candidatesListTarget" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;"></div>`;
-                document.querySelector('main').appendChild(viewContainer);
-                renderCandidatesTabContent();
-            }
-            else if (targetTab === 'evaluations') {
-                viewContainer.innerHTML = `
-                    <div class="panel-header"><h2 class="panel-title">⚖️ AI Match Evaluations</h2></div>
+        });
     </script>
 </body>
-</html>
-
+</
