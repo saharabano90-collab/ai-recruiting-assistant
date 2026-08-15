@@ -285,4 +285,142 @@
         <div class="nav-section">
             <div class="nav-section-title">Hiring</div>
             <a href="#" class="nav-item">
-💼 Job Roles0👥 Candidates0AI Tools⚖️ Evaluations0💬 Interview PrepEstablish New Job PositionJob TitleDepartmentCore Requirements TextCancelSave PositionProcess Candidate EvaluationCandidate Full NameSelect Targeted Role-- No open positions configured --Resume File Asset⚡ AI is parsing document and running matching profiles...CancelRun Analysisconst BACKEND_URL = "http://localhost:8000/api";// Modal Open/Close Togglesfunction openModal(id) {document.getElementById(id).style.display = 'flex';if (id === 'resumeModal') { fetchAndPopulateRolesDropdown(); }}function closeModal(id) { document.getElementById(id).style.display = 'none'; }// Fetch position entries to build selection dropdowns dynamicallyasync function fetchAndPopulateRolesDropdown() {try {const response = await fetch(${BACKEND_URL}/roles);const roles = await response.json();const dropdown = document.getElementById('candidateRoleSelect');dropdown.innerHTML = roles.length === 0? '-- Setup a Job Role First --': roles.map(r => <option value="${r.id}">${r.title} (${r.department})</option>).join('');} catch (err) { console.error("Could not fetch target roles:", err); }}// Action Submission: Save Job Specification Rowsasync function submitJobRole() {const title = document.getElementById('roleTitle').value;const department = document.getElementById('roleDept').value;const requirements = document.getElementById('roleRequirements').value;if(!title || !requirements) { alert("Please populate Title and Requirements fields."); return; }try {await fetch(${BACKEND_URL}/roles, {method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({ title, department, requirements })});closeModal('roleModal');updateDashboardMetrics();} catch (err) { alert("Error connecting to Python backend."); }}// Action Submission: Form data handler parsing file inputsasync function handleResumeSubmissionPipeline() {const name = document.getElementById('candidateName').value;const roleId = document.getElementById('candidateRoleSelect').value;const fileInput = document.getElementById('resumeFile');if(!name || !roleId || fileInput.files.length === 0) {alert("Please fill in candidate details and attach a valid resume document.");return;}// Enter active background extraction statedocument.getElementById('processingLoader').style.display = 'block';document.getElementById('modalActionButtons').style.style = 'none';await processCandidatePipeline(name, roleId, fileInput.files[0]);// Clear loader UI state parametersdocument.getElementById('processingLoader').style.display = 'none';document.getElementById('modalActionButtons').style.display = 'flex';closeModal('resumeModal');}// 1. Refresh global dashboard numeric indicators automatically on layout initializationasync function updateDashboardMetrics() {try {const response = await fetch(${BACKEND_URL}/dashboard/metrics);const data = await response.json();// Update metric values across UI cardsdocument.querySelectorAll('.metric-card')[0].querySelector('.metric-value').innerText = data.counters.total_candidates;document.querySelectorAll('.metric-card')[1].querySelector('.metric-value').innerText = data.counters.active_roles;document.querySelectorAll('.metric-card')[2].querySelector('.metric-value').innerText = data.counters.evaluations;document.querySelectorAll('.metric-card')[3].querySelector('.metric-value').innerText = data.counters.avg_match_score;// Synchronize sub-badge counters on left nav menu paneldocument.getElementById('sidebarRolesCount').innerText = data.counters.active_roles;document.getElementById('sidebarCandidatesCount').innerText = data.counters.total_candidates;document.getElementById('sidebarEvalCount').innerText = data.counters.evaluations;// Render Top Ranked Candidates view space if data rows existconst panel = document.getElementById('rankedCandidatesPanel');if (data.top_ranked.length > 0 && panel) {let htmlList = <div style="width:100%; display:flex; flex-direction:column; gap:10px;">;data.top_ranked.forEach(candidate => {htmlList +=  <div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1e293b;"> <div> <div style="font-weight:600; color:#f8fafc;">${candidate.name}</div> <div style="font-size:0.8rem; color:#64748b;">Vacancy Match: ${candidate.role_title} • ${candidate.experience} Yrs Exp</div> </div> <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:4px 8px; border-radius:6px;">${candidate.score}% Match</div> </div>;});htmlList += </div>;panel.innerHTML =  <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div> ${htmlList};}} catch (err) {console.error("Dashboard connection sync error:", err);}}// 2. Programmatic hooks managing automated resume scanning execution flowsasync function processCandidatePipeline(candidateName, targetRoleId, resumeFileAsset) {const formData = new FormData();formData.append("name", candidateName);formData.append("role_id", targetRoleId);formData.append("file", resumeFileAsset);try {// Step A: Register the profile record assetsconst uploadRes = await fetch(${BACKEND_URL}/candidates/upload, { method: "POST", body: formData });if (!uploadRes.ok) throw new Error("Document structure text extraction stage failed.");const uploadData = await uploadRes.json();// Step B: Trigger AI Context evaluations loopsconst evalRes = await fetch(${BACKEND_URL}/candidates/${uploadData.candidate_id}/evaluate, { method: "POST" });if (!evalRes.ok) throw new Error("AI engine grading process error.");const completeMetrics = await evalRes.json();alert(Evaluation complete for ${completeMetrics.candidate_profile.name}!\nScore: ${completeMetrics.match_score}%);updateDashboardMetrics(); // Synchronize metric rows instantlyreturn completeMetrics;} catch (error) {alert(Recruiting workflow exception: ${error.message});}}// Initialize components when DOM cycles load safelywindow.addEventListener('DOMContentLoaded', updateDashboardMetrics);
+    <!-- ... Rest of your dashboard body code remains unchanged here ... -->
+
+    <!-- 1. Ensure your script tag opens cleanly before any Javascript execution -->
+    <script>
+        const BACKEND_URL = "http://localhost:8000/api";
+
+        // Modal Open/Close Toggles
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            if (id === 'resumeModal') { fetchAndPopulateRolesDropdown(); }
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // Fetch position entries to build selection dropdowns dynamically
+        async function fetchAndPopulateRolesDropdown() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/roles`);
+                const roles = await response.json();
+                const dropdown = document.getElementById('candidateRoleSelect');
+                dropdown.innerHTML = roles.length === 0 
+                    ? '<option value="">-- Setup a Job Role First --</option>'
+                    : roles.map(r => `<option value="${r.id}">${r.title} (${r.department})</option>`).join('');
+            } catch (err) { console.error("Could not fetch target roles:", err); }
+        }
+
+        // Action Submission: Save Job Specification Rows
+        async function submitJobRole() {
+            const title = document.getElementById('roleTitle').value;
+            const department = document.getElementById('roleDept').value;
+            const requirements = document.getElementById('roleRequirements').value;
+
+            if(!title || !requirements) { alert("Please populate Title and Requirements fields."); return; }
+
+            try {
+                await fetch(`${BACKEND_URL}/roles`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title, department, requirements })
+                });
+                closeModal('roleModal');
+                updateDashboardMetrics();
+            } catch (err) { alert("Error connecting to Python backend."); }
+        }
+
+        // Action Submission: Form data handler parsing file inputs
+        async function handleResumeSubmissionPipeline() {
+            const name = document.getElementById('candidateName').value;
+            const roleId = document.getElementById('candidateRoleSelect').value;
+            const fileInput = document.getElementById('resumeFile');
+
+            if(!name || !roleId || fileInput.files.length === 0) {
+                alert("Please fill in candidate details and attach a valid resume document.");
+                return;
+            }
+
+            // Enter active background extraction state
+            document.getElementById('processingLoader').style.display = 'block';
+            document.getElementById('modalActionButtons').style.display = 'none';
+
+            await processCandidatePipeline(name, roleId, fileInput.files[0]);
+
+            // Clear loader UI state parameters
+            document.getElementById('processingLoader').style.display = 'none';
+            document.getElementById('modalActionButtons').style.display = 'flex';
+            closeModal('resumeModal');
+        }
+
+        // Refresh global dashboard numeric indicators automatically on layout initialization
+        async function updateDashboardMetrics() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/dashboard/metrics`);
+                const data = await response.json();
+                
+                // Update metric values across UI cards
+                document.querySelectorAll('.metric-card')[0].querySelector('.metric-value').innerText = data.counters.total_candidates;
+                document.querySelectorAll('.metric-card')[1].querySelector('.metric-value').innerText = data.counters.active_roles;
+                document.querySelectorAll('.metric-card')[2].querySelector('.metric-value').innerText = data.counters.evaluations;
+                document.querySelectorAll('.metric-card')[3].querySelector('.metric-value').innerText = data.counters.avg_match_score;
+                
+                // Synchronize sub-badge counters on left nav menu panel
+                document.getElementById('sidebarRolesCount').innerText = data.counters.active_roles;
+                document.getElementById('sidebarCandidatesCount').innerText = data.counters.total_candidates;
+                document.getElementById('sidebarEvalCount').innerText = data.counters.evaluations;
+
+                // Render Top Ranked Candidates view space if data rows exist
+                const panel = document.getElementById('rankedCandidatesPanel');
+                if (data.top_ranked.length > 0 && panel) {
+                    let htmlList = `<div style="width:100%; display:flex; flex-direction:column; gap:10px;">`;
+                    data.top_ranked.forEach(candidate => {
+                        htmlList += `
+                            <div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1e293b;">
+                                <div>
+                                    <div style="font-weight:600; color:#f8fafc;">${candidate.name}</div>
+                                    <div style="font-size:0.8rem; color:#64748b;">Vacancy Match: ${candidate.role_title} • ${candidate.experience} Yrs Exp</div>
+                                </div>
+                                <div style="font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); padding:4px 8px; border-radius:6px;">${candidate.score}% Match</div>
+                            </div>`;
+                    });
+                    htmlList += `</div>`;
+                    panel.innerHTML = `
+                        <div class="panel-header"><h2 class="panel-title">🏆 Top Ranked Candidates</h2><a href="#" class="panel-link">View All →</a></div>
+                        ${htmlList}`;
+                }
+            } catch (err) {
+                console.error("Dashboard connection sync error:", err);
+            }
+        }
+
+        // Programmatic hooks managing automated resume scanning execution flows
+        async function processCandidatePipeline(candidateName, targetRoleId, resumeFileAsset) {
+            const formData = new FormData();
+            formData.append("name", candidateName);
+            formData.append("role_id", targetRoleId);
+            formData.append("file", resumeFileAsset);
+
+            try {
+                // Step A: Register the profile record assets
+                const uploadRes = await fetch(`${BACKEND_URL}/candidates/upload`, { method: "POST", body: formData });
+                if (!uploadRes.ok) throw new Error("Document structure text extraction stage failed.");
+                const uploadData = await uploadRes.json();
+                
+                // Step B: Trigger AI Context evaluations loops
+                const evalRes = await fetch(`${BACKEND_URL}/candidates/${uploadData.candidate_id}/evaluate`, { method: "POST" });
+                if (!evalRes.ok) throw new Error("AI engine grading process error.");
+                const completeMetrics = await evalRes.json();
+                
+                alert(`Evaluation complete for ${completeMetrics.candidate_profile.name}!\nScore: ${completeMetrics.match_score}%`);
+                updateDashboardMetrics(); // Synchronize metric rows instantly
+                return completeMetrics;
+            } catch (error) {
+                alert(`Recruiting workflow exception: ${error.message}`);
+            }
+        }
+
+        // Initialize components when DOM cycles load safely
+        window.addEventListener('DOMContentLoaded', updateDashboardMetrics);
+    </script> <!-- 2. Close your script block cleanly here before the body ends -->
+</body>
+</html>
