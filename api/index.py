@@ -1,23 +1,23 @@
 import os
 import io
-from typing import List, Dict, Any
+import uuid
+from typing import List, Dict, Optional, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import pydantic_core
+from pydantic import BaseModel, Field
 
-# Document & Image Reading Libraries
+# Document Parser Libraries
 from pypdf import PdfReader
 from docx import Document
 from PIL import Image
 
-# Modern Gemini SDK
+# Modern Gemini API Wrapper SDK
 from google import genai
 from google.genai import types
 
-app = FastAPI(title="AI Recruiting Assistant API")
+app = FastAPI(title="HireAI Recruiting Dashboard Backend API")
 
-# Enable CORS for frontend connectivity
+# Configure CORS to communicate seamlessly with your custom HTML dashboard
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,136 +26,215 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the Gemini Client (Ensure GEMINI_API_KEY environment variable is set)
+# Initialize the GenAI Client (Make sure GEMINI_API_KEY environment variable is set)
 client = genai.Client()
 
+# --- Volatile In-Memory Dashboard Mock Databases ---
+# Holds current application state metrics during active runtime runtime loops
+JOB_ROLES_DB: Dict[str, Dict[str, Any]] = {}
+CANDIDATES_DB: Dict[str, Dict[str, Any]] = {}
+
+
 # --- Pydantic Data Structures ---
+
+class JobRoleCreate(BaseModel):
+    title: str
+    department: str
+    requirements: str
+
 class CandidateProfile(BaseModel):
-    name: str
-    skills: List[str]
-    experience_years: float
-    education: List[str]
-    certifications: List[str]
+    name: str = Field(..., description="Extract candidate full name. Default to 'Unknown Applicant' if missing.")
+    skills: List[str] = Field(default_factory=list, description="Array of technical or soft skills discovered.")
+    experience_years: float = Field(0.0, description="Total summary of relevant experience in fractional or whole numbers.")
+    education: List[str] = Field(default_factory=list, description="Key degrees, fields of study, or universities.")
+    certifications: List[str] = Field(default_factory=list, description="Professional licenses or training credentials.")
 
-class MatchEvaluation(BaseModel):
+class CandidateEvaluationResult(BaseModel):
     candidate_profile: CandidateProfile
-    match_score: int
-    summary: str
-    strengths: List[str]
-    gaps: List[str]
-    generated_interview_questions: List[str]
+    match_score: int = Field(..., description="An objective scoring parameter grading alignment against rules between 0 and 100.")
+    summary: str = Field(..., description="A punchy overview summarizing core competencies.")
+    strengths: List[str] = Field(default_factory=list, description="Bullet metrics highlighting candidate advantages.")
+    gaps: List[str] = Field(default_factory=list, description="Qualifications or technical items noted as missing.")
+    interview_questions: List[str] = Field(default_factory=list, description="3-5 customized structured behavioral or role interview questions.")
 
 
-# --- Document Extraction Functions ---
+# --- Document & Image Reading Parsers ---
 
-def extract_text_from_pdf(file_bytes: bytes) -> str:
-    try:
-        reader = PdfReader(io.BytesIO(file_bytes))
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() or ""
-        return text
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse PDF file: {str(e)}")
-
-def extract_text_from_docx(file_bytes: bytes) -> str:
-    try:
-        doc = Document(io.BytesIO(file_bytes))
-        return "\n".join([para.text for para in doc.paragraphs])
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse Word Document: {str(e)}")
-
-def extract_text_from_image(file_bytes: bytes) -> str:
-    """
-    Passes image bytes (PNG/JPG) directly into Gemini's multimodal 
-    engine to read the text content natively.
-    """
-    try:
-        image = Image.open(io.BytesIO(file_bytes))
-        ocr_prompt = "Extract and transcribe all readable text from this resume document accurately as raw text."
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[image, ocr_prompt]
-        )
-        return response.text or ""
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse or run OCR on Image: {str(e)}")
-
-
-# --- Core AI Processing Logic ---
-
-def process_ai_evaluation(job_description: str, resume_text: str) -> MatchEvaluation:
-    if not job_description.strip() or not resume_text.strip():
-        raise HTTPException(status_code=400, detail="Job description or resume content cannot be blank.")
-
-    prompt = f"""
-    You are an expert HR AI Recruiting Assistant. Your task is to extract candidate details from the provided resume text, 
-    evaluate how well they match the job description, score them, and generate role-specific interview questions.
-
-    [JOB DESCRIPTION]
-    {job_description}
-
-    [CANDIDATE RESUME]
-    {resume_text}
-
-    Analyze the profiles objectively and follow the exact required JSON schema structure.
-    """
+def extract_text_from_bytes(file_bytes: bytes, filename: str) -> str:
+    ext = filename.lower().split('.')[-1] if '.' in filename else ''
     
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=MatchEvaluation,
-                temperature=0.2,
-            ),
-        )
-        return MatchEvaluation.model_validate_json(response.text)
-    except pydantic_core.ValidationError as ve:
-        raise HTTPException(status_code=500, detail=f"AI data did not match HR schema: {str(ve)}")
+        if ext == 'pdf':
+            reader = PdfReader(io.BytesIO(file_bytes))
+            return "".join([page.extract_text() or "" for page in reader.pages])
+            
+        elif ext in ['docx', 'doc']:
+            doc = Document(io.BytesIO(file_bytes))
+            return "\n".join([p.text for p in doc.paragraphs])
+            
+        elif ext in ['png', 'jpg', 'jpeg', 'webp']:
+            image = Image.open(io.BytesIO(file_bytes))
+            ocr_prompt = "Transcribe all printed text and tabular experience formatting from this resume file exactly."
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[image, ocr_prompt]
+            )
+            return response.text or ""
+        else:
+            raise HTTPException(status_code=400, detail="Supported formats strictly include PDF, DOCX, PNG, or JPG.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Service communication failure: {str(e)}")
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=422, detail=f"Failed to cleanly extract text content from file asset: {str(e)}")
 
 
-# --- API Endpoints ---
+# --- Primary Dashboard Routes ---
 
-@app.post("/api/evaluate-candidate", response_model=MatchEvaluation)
-async def evaluate_candidate_text(payload: dict):
-    """Fallback text submission endpoint"""
-    return process_ai_evaluation(payload.get("job_description", ""), payload.get("resume_text", ""))
+@app.get("/api/dashboard/metrics")
+async def get_dashboard_metrics():
+    """
+    Returns summary counters mapping directly to top metric rows in the UI
+    """
+    total_candidates = len(CANDIDATES_DB)
+    active_roles = len(JOB_ROLES_DB)
+    
+    # Calculate ongoing total evaluations completed
+    evaluations_count = sum(1 for c in CANDIDATES_DB.values() if c.get("evaluated"))
+    
+    # Calculate accurate moving match average parameters
+    valid_scores = [c["match_score"] for c in CANDIDATES_DB.values() if c.get("evaluated") and c.get("match_score") is not None]
+    avg_score = f"{round(sum(valid_scores) / len(valid_scores))}%" if valid_scores else "—"
+
+    # Compile array list containing top matches sorted by descending order parameters
+    ranked_candidates = [
+        {
+            "id": cid,
+            "name": c["name"],
+            "score": c["match_score"],
+            "experience": c["experience_years"],
+            "role_title": c["role_title"]
+        }
+        for cid, c in CANDIDATES_DB.items() if c.get("evaluated")
+    ]
+    ranked_candidates.sort(key=lambda x: x["score"], reverse=True)
+
+    return {
+        "counters": {
+            "total_candidates": total_candidates,
+            "active_roles": active_roles,
+            "evaluations": evaluations_count,
+            "avg_match_score": avg_score
+        },
+        "top_ranked": ranked_candidates[:5] # Return top 5 profiles
+    }
 
 
-@app.post("/api/evaluate-file", response_model=MatchEvaluation)
-async def evaluate_candidate_file(
-    job_description: str = Form(...),
+@app.post("/api/roles")
+async def create_job_role(role: JobRoleCreate):
+    """
+    Registers a new target vacancy standard layout
+    """
+    role_id = str(uuid.uuid4())[:8]
+    JOB_ROLES_DB[role_id] = {
+        "id": role_id,
+        "title": role.title,
+        "department": role.department,
+        "requirements": role.requirements
+    }
+    return {"message": "Job role established safely.", "role_id": role_id}
+
+
+@app.get("/api/roles")
+async def list_job_roles():
+    return list(JOB_ROLES_DB.values())
+
+
+@app.post("/api/candidates/upload")
+async def upload_candidate_resume(
+    name: str = Form(...),
+    role_id: str = Form(...),
     file: UploadFile = File(...)
 ):
     """
-    Main file submission endpoint. Supports .pdf, .docx, and common image formats.
+    Receives raw resume file attachments, extracts plaintext, and generates background profiles
     """
+    if role_id not in JOB_ROLES_DB:
+        raise HTTPException(status_code=404, detail="Target job role tracking reference not found.")
+        
     file_bytes = await file.read()
-    filename = file.filename.lower() if file.filename else ""
-    resume_text = ""
+    extracted_text = extract_text_from_bytes(file_bytes, file.filename or "resume.pdf")
+    
+    candidate_id = str(uuid.uuid4())[:8]
+    CANDIDATES_DB[candidate_id] = {
+        "id": candidate_id,
+        "name": name,
+        "role_id": role_id,
+        "role_title": JOB_ROLES_DB[role_id]["title"],
+        "resume_text": extracted_text,
+        "evaluated": False,
+        "match_score": None
+    }
+    
+    return {"message": "Candidate resume file parsed successfully.", "candidate_id": candidate_id}
 
-    if filename.endswith('.pdf'):
-        resume_text = extract_text_from_pdf(file_bytes)
-    elif filename.endswith('.docx') or filename.endswith('.doc'):
-        resume_text = extract_text_from_docx(file_bytes)
-    elif filename.endswith(('.png', '.jpg', '.jpeg', '.webp')):
-        resume_text = extract_text_from_image(file_bytes)
-    else:
-        raise HTTPException(
-            status_code=400, 
-            detail="Unsupported file extension. Please upload a PDF, Word document, or Image (PNG/JPG)."
+
+@app.post("/api/candidates/{candidate_id}/evaluate", response_model=CandidateEvaluationResult)
+async def evaluate_candidate(candidate_id: str):
+    """
+    Executes advanced structured evaluation loops using the Gemini analytical context engine
+    """
+    candidate = CANDIDATES_DB.get(candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate record not found.")
+        
+    role = JOB_ROLES_DB.get(candidate["role_id"])
+    if not role:
+        raise HTTPException(status_code=404, detail="Linked job position profile missing.")
+
+    analysis_prompt = f"""
+    You are HireAI's core executive recruitment processing assistant engine. 
+    Analyze the provided candidate resume content and compare alignment against target role specifications.
+    
+    [TARGET ROLE SPECIFICATION]
+    Title: {role['title']}
+    Requirements: {role['requirements']}
+
+    [APPLICANT RESUME CONTENT]
+    {candidate['resume_text']}
+
+    Complete parsing accuracy parameters and structure values exactly within the given response schema format.
+    """
+
+    try:
+        # Utilize deep structural processing parameters via strict type tracking schemas
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=analysis_prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=CandidateEvaluationResult,
+                temperature=0.15, # Tight tracking for precise profile mapping loops
+            )
         )
+        
+        # Hydrate JSON result maps straight through schema validations
+        evaluation = CandidateEvaluationResult.model_validate_json(response.text)
+        
+        # Commit updated tracking parameters into working runtime memory maps
+        CANDIDATES_DB[candidate_id].update({
+            "evaluated": True,
+            "name": evaluation.candidate_profile.name,
+            "match_score": evaluation.match_score,
+            "experience_years": evaluation.candidate_profile.experience_years,
+            "details": evaluation.model_dump()
+        })
+        
+        return evaluation
 
-    if not resume_text.strip():
-        raise HTTPException(status_code=400, detail="Could not extract any readable text from the uploaded document.")
-
-    return process_ai_evaluation(job_description, resume_text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI context grading evaluation process faulted: {str(e)}")
 
 
 if __name__ == "__main__":
     import uvicorn
+    # Execute backend loops locally matching frontend expectations
     uvicorn.run(app, host="0.0.0.0", port=8000)
