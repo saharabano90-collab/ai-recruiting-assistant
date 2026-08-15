@@ -1,115 +1,231 @@
 import io
 import os
-from typing import List, Optional
+from typing import List
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import pydantic_core
-
-# Document Parser Packages
 from pypdf import PdfReader
 from docx import Document
 from PIL import Image
-
-# Modern Gemini SDK Package 
 from google import genai
 from google.genai import types
 
-app = FastAPI()
+app = FastAPI(title="HireAI API", version="2.0.0")
 
-# Enable CORS for direct integration pipelines
+# Same-origin Vercel deployment normally does not require permissive CORS,
+# but this allows direct testing from another frontend during development.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize Gemini Client (Ensure GEMINI_API_KEY is configured in your Vercel Project Dashboard)
-client = genai.Client()
+# -----------------------------
+# Gemini client
+# -----------------------------
+api_key = os.getenv("GEMINI_API_KEY")
 
-# --- Pydantic Layout Schemas ---
+if not api_key:
+    # Do not crash the deployment at import time.
+    # The API endpoint will return a useful configuration error.
+    client = None
+else:
+    client = genai.Client(api_key=api_key)
+
+# -----------------------------
+# Response schemas
+# -----------------------------
 class CandidateProfile(BaseModel):
-    name: str = Field(..., description="Extract candidate full name.")
-    skills: List[str] = Field(default_factory=list, description="List of technical/soft skills.")
-    experience_years: float = Field(0.0, description="Total summary of experience in years.")
-    education: List[str] = Field(default_factory=list, description="Key degrees or universities.")
-    certifications: List[str] = Field(default_factory=list, description="Professional certifications.")
+    name: str = Field(default="Unknown")
+    skills: List[str] = Field(default_factory=list)
+    experience_years: float = Field(default=0.0)
+    education: List[str] = Field(default_factory=list)
+    certifications: List[str] = Field(default_factory=list)
 
 class CandidateEvaluationResult(BaseModel):
     candidate_profile: CandidateProfile
-    match_score: int = Field(..., description="Objective match score between 0 and 100.")
-    summary: str = Field(..., description="Overview summarizing competency matches.")
-    strengths: List[str] = Field(default_factory=list, description="Bullet items detailing strengths.")
-    gaps: List[str] = Field(default_factory=list, description="Qualifications or technical elements missing.")
-    interview_questions: List[str] = Field(default_factory=list, description="3-5 tailored technical/behavioral interview questions.")
+    match_score: int = Field(ge=0, le=100)
+    summary: str
+    strengths: List[str] = Field(default_factory=list)
+    gaps: List[str] = Field(default_factory=list)
+    interview_questions: List[str] = Field(default_factory=list)
 
-
-# --- Document Parsing Utility Loops ---
+# -----------------------------
+# Document extraction
+# -----------------------------
 def read_text_from_file_bytes(file_bytes: bytes, filename: str) -> str:
-    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    filename = filename or "resume.pdf"
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     try:
-        if ext == 'pdf':
+        if ext == "pdf":
             reader = PdfReader(io.BytesIO(file_bytes))
-            return "".join([page.extract_text() or "" for page in reader.pages])
-        elif ext in ['docx', 'doc']:
+            pages = []
+            for page in reader.pages:
+                text = page.extract_text() or ""
+                if text.strip():
+                    pages.append(text)
+
+            return "\n".join(pages).strip()
+
+        if ext == "docx":
             doc = Document(io.BytesIO(file_bytes))
-            return "\n".join([p.text for p in doc.paragraphs])
-        elif ext in ['png', 'jpg', 'jpeg', 'webp']:
+            return "\n".join(
+                p.text for p in doc.paragraphs if p.text.strip()
+            ).strip()
+
+        if ext in {"png", "jpg", "jpeg", "webp"}:
+            if client is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="GEMINI_API_KEY is not configured in Vercel."
+                )
             image = Image.open(io.BytesIO(file_bytes))
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[image, "Transcribe all readable text formatting from this resume exactly."]
+                model="gemini-2.5-flash",
+                contents=[
+                    image,
+                    "Extract all readable text from this resume. Return only the text."
+                ],
             )
-            return response.text or ""
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported format. Upload PDF, DOCX, PNG, or JPG.")
-    except Exception as e:
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=422, detail=f"Failed to read file asset text parameters: {str(e)}")
+            return (response.text or "").strip()
 
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported format. Upload PDF, DOCX, PNG, JPG, or JPEG."
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Could not read resume: {exc}"
+        )
 
-# --- Serverless Function Endpoints ---
+# -----------------------------
+# Health check
+# -----------------------------
+@app.get("/api/health")
+async def health():
+    return {
+        "status": "ok",
+        "gemini_configured": bool(api_key),
+    }
 
+# -----------------------------
+# Main evaluation endpoint
+# -----------------------------
 @app.post("/api/evaluate-direct-file")
 async def evaluate_direct_file(
     job_requirements: str = Form(...),
-    file: UploadFile = File(...)
+    candidate_name: str = Form(""),
+    file: UploadFile = File(...),
 ):
-    """
-    Serverless Endpoint: Accepts a raw job description string and a file asset attachment.
-    Parses document bytes, triggers Gemini, and outputs a complete assessment block instantly.
-    """
+    if client is None:
+        raise HTTPException(
+            status_code=500,
+            detail="GEMINI_API_KEY is missing. Add it in Vercel Project Settings > Environment Variables and redeploy."
+        )
+    if not job_requirements.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Job description / requirements are required."
+        )
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="Resume file is required."
+        )
+    allowed = {".pdf", ".docx", ".png", ".jpg", ".jpeg", ".webp"}
+    extension = (
+        "." + file.filename.lower().rsplit(".", 1)[-1]
+        if "." in file.filename
+        else ""
+    )
+    if extension not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported resume format."
+        )
     file_bytes = await file.read()
-    resume_text = read_text_from_file_bytes(file_bytes, file.filename or "resume.pdf")
-    
+
+    if not file_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded resume is empty."
+        )
+    resume_text = read_text_from_file_bytes(file_bytes, file.filename)
+
     if not resume_text.strip():
-        raise HTTPException(status_code=400, detail="Could not pull text data elements out of document.")
-
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "No readable text was extracted from this PDF. "
+                "If the resume is a scanned/image-only PDF, upload a text-based PDF "
+                "or DOCX, or add OCR processing."
+            )
+        )
     ai_prompt = f"""
-    You are HireAI's recruiting evaluation engine. 
-    Analyze the provided candidate resume content and grade alignment against target requirements.
-    
-    [CORE REQUIREMENTS]
-    {job_requirements}
+You are HireAI, a recruiting evaluation assistant.
 
-    [CANDIDATE RESUME TEXT]
-    {resume_text}
+Evaluate the candidate ONLY against job-relevant information.
 
-    Structure values objectively and format parameters exactly according to the schema template rules.
-    """
+Do not use or infer protected characteristics such as age, gender,
+religion, race/ethnicity, marital status, disability, photograph,
+nationality, or other non-job-related personal characteristics.
+
+JOB REQUIREMENTS:
+{job_requirements}
+
+CANDIDATE NAME PROVIDED BY RECRUITER:
+{candidate_name}
+
+RESUME TEXT:
+{resume_text}
+
+Return a structured evaluation containing:
+- candidate_profile
+- match_score from 0 to 100
+- concise summary
+- strengths
+- gaps
+- 3 to 5 role-specific interview questions
+
+The score must be based on evidence in the resume and the supplied job
+requirements. Do not invent qualifications that are not supported by the resume.
+"""
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model="gemini-2.5-flash",
             contents=ai_prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=CandidateEvaluationResult,
                 temperature=0.15,
-            )
+            ),
         )
-        return CandidateEvaluationResult.model_validate_json(response.text)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI engine grading fault: {str(e)}")
+
+        if not response.text:
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini returned an empty evaluation."
+            )
+
+        result = CandidateEvaluationResult.model_validate_json(response.text)
+
+        # Prefer the recruiter-provided name when available.
+        if candidate_name.strip():
+            result.candidate_profile.name = candidate_name.strip()
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI evaluation failed: {exc}"
+        )
