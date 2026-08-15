@@ -1,0 +1,7 @@
+fastapi
+pydantic
+google-genai
+python-multipart
+pypdf
+python-docx
+pillow
