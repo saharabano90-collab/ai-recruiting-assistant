@@ -768,7 +768,7 @@ async function handleResumeSubmissionPipeline() {
 
         formData.append("candidate_name", name);
         formData.append("job_requirements", role.requirements);
-        formData.append("file", file);
+        formData.append("file", fileInput.files[0]);
 
         const response = await fetch(
             `${BACKEND_URL}/evaluate-direct-file`,
